@@ -1,0 +1,6 @@
+var c = 0 ;
+for var i = 0 ; i < 10 ; i = i + 1 ; {
+    c = input ;
+    c = c * 3 ;
+    print c ;
+}

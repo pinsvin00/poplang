@@ -1,0 +1,24 @@
+var primes = [ 2, 3, 5, 7 ];
+var brek = 2;
+var mod = 1;
+var result = 0;
+
+for var i = 8 ; i < 100; i++ {
+    result = 1;
+    for var j = 0; j < primes.size; j++ {
+        mod = i % primes[j];
+        if mod == 0 {
+            result = 0;
+            break;
+        }
+    }
+
+    if result == 1 {
+
+        print i;
+        primes.append(i);
+    }
+
+}
+
+
