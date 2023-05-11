@@ -1,0 +1,3 @@
+var numbers = [ 2, [3 + 3, 4], 5, 7 ];
+
+print numbers[1][0];
