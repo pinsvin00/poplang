@@ -28,14 +28,14 @@ namespace SEQL {
         bool break_requested = false;
         bool continue_requested = false;
 
-        std::shared_ptr<Value> handle_operator(std::shared_ptr<OperatorFragment> frag);
-        std::shared_ptr<Value> handle_keyword(std::shared_ptr<KeywordFragment> frag);
-        std::shared_ptr<Value> eval(std::shared_ptr<Fragment> fragment);
+        std::shared_ptr<Value> handle_operator(OperatorFragment* frag);
+        std::shared_ptr<Value> handle_keyword(KeywordFragment* frag);
+        std::shared_ptr<Value> eval(Fragment * fragment);
 
-        bool evals_to_true(std::shared_ptr<Fragment> condition_fragment);
+        bool evals_to_true(Fragment* condition_fragment);
 
-        std::map<std::string, std::shared_ptr<Variable>> variables;
-        std::map<std::string, std::shared_ptr<Function>> functions;
+        std::map<std::string, Variable*> variables;
+        std::map<std::string, Function*> functions;
     };
 }
 

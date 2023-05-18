@@ -3,7 +3,7 @@
 //
 #include "Engine.h"
 
-std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(std::shared_ptr<SEQL::OperatorFragment> frag) {
+std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     if (frag->operator_type == OperatorType::ASSIGN) {
         auto l = eval(frag->l_arg);
         auto r_val = eval(frag->r_arg);
@@ -22,12 +22,7 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(std::shared_ptr<SEQL:
         if(l_val == nullptr) {
             this->fatal_error_occured = true;
         }
-
         auto r_val = eval(frag->r_arg);
-
-//        if(r_val->value_type != ValueType::NUMBER) {
-//            std::cout << "Non integer array indices" << std::endl;
-//        }
         auto index = std::stoi(r_val->result);
         return l_val->array_values[index];
     }
@@ -35,7 +30,7 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(std::shared_ptr<SEQL:
         auto l_val = eval(frag->l_arg);
         //access method from some object
         if(frag->r_arg->type == FragmentType::FUNCTION_CALL) {
-            auto function_call = std::static_pointer_cast<FunctionCallFragment>(frag->r_arg);
+            auto function_call = (FunctionCallFragment*)(frag->r_arg);
             auto f_name = function_call->function_name;
             auto args = resolve_args(function_call->args);
             if(l_val->value_type == ValueType::ARRAY) {
@@ -57,7 +52,7 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(std::shared_ptr<SEQL:
         }
         //access field from some object
         else {
-            auto r_val = std::static_pointer_cast<VariableReferenceFragment>(frag->r_arg);
+            auto r_val = (VariableReferenceFragment*)(frag->r_arg);
             if(l_val->value_type == ValueType::STRING) {
                 if(r_val->name == "size") {
 

@@ -33,6 +33,8 @@ public:
 
 class Lexer {
 public:
+    unsigned int current_line = 1;
+    std::vector<std::string> lines;
     std::vector<Token> tokens;
     void tokenize(const std::string& line);
     void tokenize_file(const std::string &path);
