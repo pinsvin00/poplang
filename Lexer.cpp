@@ -13,12 +13,18 @@ void Lexer::tokenize_file(const std::string& path) {
             this->tokenize(buffer);
         }
     }
+    else
+    {
+        std::cout << "Failed to load file at " << path << std::endl;
+    }
 
 }
 
 void Lexer::tokenize(const std::string& line){
     std::string fragment_buffer;
     bool reading_string_literal = false;
+    lines.push_back(line);
+    tokens.push_back(Token("\n"));
 
     std::string operators = "()[]{}!+-*/%^&<>=;,. ";
     std::vector<std::string> char2Ops = {

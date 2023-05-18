@@ -15,27 +15,43 @@ using namespace SEQL;
  * Everything is just treated like a fragment
  */
 
+
+void SEQL::ASTCreator::raise_error()
+{
+    this->break_constructing = true;
+    this->state = ASTState::BROKEN;
+
+    std::cout << "Line number: " << this->current_error.line << " -> "  << this->current_error.message << std::endl;
+}
+
 void SEQL::ASTCreator::read_fragment() {
 
-    //statement may be multi line lol!
+    
+    if(pos >= tokens.size())
+    {
+        break_constructing = true;
+        this->last_frag = nullptr;
+        return;
+    }
+
     while (pos < tokens.size() && !break_constructing) {
         Token token = next();
         //primitives
         if(token.type == TokenType::NUMBER) {
-            this->last_frag = std::make_shared<Value>(token.value);
+            this->last_frag = new Value(token.value);
             this->last_frag->debug_value = token.value;
         }
         else if(token.type == TokenType::STRING) {
-            this->last_frag = std::make_shared<Value>(token.value);
+            this->last_frag = new Value(token.value);
             this->last_frag->debug_value = token.value;
         }
         else if(token.type == TokenType::KEYWORD){
-            auto keyword_frag =  std::make_shared<KeywordFragment>();
+            auto keyword_frag =  new KeywordFragment();
             if(token.value == "var") {
                 Token var_tok = next();
                 auto var_name = var_tok.value;
                 keyword_frag->keyword_type = KeywordType::VAR;
-                keyword_frag->arguments = { std::make_shared<Value>(var_name) };
+                keyword_frag->arguments = { new Value(var_name) };
                 keyword_frag->debug_value = "var " + var_name;
             }
             else if(token.value == "input") {
@@ -115,13 +131,13 @@ void SEQL::ASTCreator::read_fragment() {
                 keyword_frag->debug_value = "break";
             }
             else if(token.value == "continue") {
-                auto frag = std::make_shared<KeywordFragment>();
+                auto frag = new KeywordFragment();
                 frag->keyword_type = KeywordType::CONTINUE;
 
                 this->last_frag = frag;
             }
             else if(token.value == "return") {
-                auto return_frag = std::make_shared<KeywordFragment>();
+                auto return_frag = new KeywordFragment();
                 read_fragment();
                 auto last = this->last_frag;
                 return_frag->keyword_type = KeywordType::RETURN;
@@ -130,10 +146,20 @@ void SEQL::ASTCreator::read_fragment() {
                 this->last_frag = return_frag;
             }
             else if(token.value == "fun") {
-                auto function = std::make_shared<Function>();
-                auto name = std::static_pointer_cast<VariableReferenceFragment>(next_fragment());
+                auto function = new Function();
+                
+                auto frag = next_fragment();
+                VariableReferenceFragment * function_name = nullptr;
+                if(frag->type != FragmentType::VARIABLE)
+                {
+                    auto name = (VariableReferenceFragment*)(next_fragment());
+                    
+                    raise_error();
+                    return;
+                }   
 
-                function->name = name->name;
+
+                function->name = function_name->name;
                 function->function_args = read_statement();
                 read_fragment(); //read {
                 //if last_frag not equal to {
@@ -145,7 +171,7 @@ void SEQL::ASTCreator::read_fragment() {
                 return;
             }
             else if(token.value == "for") {
-                std::vector<std::shared_ptr<Fragment>> for_fragments;
+                std::vector<Fragment*> for_fragments;
                 for (int i = 0; i < 3; ++i) {
                     read_fragment();
                     for_fragments.push_back(this->last_frag);
@@ -161,15 +187,15 @@ void SEQL::ASTCreator::read_fragment() {
                     for_statement->each = for_fragments[2];
                     for_statement->is_composed = true;
 
-                    auto statement = this->read_statement();
-                    for_statement->child_statement = statement;
+                    auto for_body = this->read_statement();
+                    for_statement->child_statement = for_body;
                 }
                 else {
-                    //handle errors todo
-
-                    this->state = ASTState::BROKEN;
-                    this->current_error = ASTError("Invalid arguments", 0, true);
+                    
+                    this->current_error = ASTError("Failed to read for statement fragment was null", this->current_line, true);
                     this->break_constructing = true;
+                    this->state = ASTState::BROKEN;
+                    raise_error();
                     return;
                 }
 
@@ -184,13 +210,13 @@ void SEQL::ASTCreator::read_fragment() {
         else if(token.type == TokenType::CURLY_BRACKET) {
             if(token.value == "{") {
                 break_constructing = true;
-                semaphore_frag = std::make_shared<Fragment>();
+                semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::CURLY_BRACKET_OPEN;
                 return;
             }
             else if(token.value == "}") {
                 break_constructing = true;
-                semaphore_frag = std::make_shared<Fragment>();
+                semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::CURLY_BRACKET_CLOSE;
                 return;
             }
@@ -199,14 +225,14 @@ void SEQL::ASTCreator::read_fragment() {
 
             if(token.value == "(") {
                 break_constructing = true;
-                semaphore_frag = std::make_shared<Fragment>();
+                semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::BRACKET_OPEN;
                 return;
             }
 
             else if(token.value == ")") {
                 break_constructing = true;
-                semaphore_frag = std::make_shared<Fragment>();
+                semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::BRACKET_CLOSE;
                 return;
             }
@@ -217,12 +243,12 @@ void SEQL::ASTCreator::read_fragment() {
 
                     bool isArrayValue = false;
                     if(this->last_frag->type == FragmentType::OPERATOR) {
-                        auto oper = std::static_pointer_cast<OperatorFragment>(this->last_frag);
+                        auto oper = (OperatorFragment*)(this->last_frag);
                         isArrayValue = oper->operator_type == OperatorType::ARRAY_REFERENCE;
                     }
 
                     if(this->last_frag->type == FragmentType::VARIABLE || this->last_frag->type == FragmentType::STATEMENT_LINK || isArrayValue) {
-                        auto array_operator = std::make_shared<OperatorFragment>();
+                        auto array_operator = new OperatorFragment();
                         array_operator->operator_type  = OperatorType::ARRAY_REFERENCE;
                         array_operator->l_arg = this->last_frag;
                         array_operator->r_arg = this->next_fragment();
@@ -235,10 +261,10 @@ void SEQL::ASTCreator::read_fragment() {
                     }
                 }
 
-                semaphore_frag = std::make_shared<Fragment>();
+                semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::SQUARE_BRACKET_OPEN;
                 auto array_statement = read_statement();
-                auto link = std::make_shared<ArrayFragment>(array_statement);
+                auto link = new ArrayFragment(array_statement);
                 this->last_frag = link;
 
                 return;
@@ -247,64 +273,15 @@ void SEQL::ASTCreator::read_fragment() {
                 return;
             }
             else if (token.value == "]") {
-                semaphore_frag = std::make_shared<Fragment>();
+                semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::SQUARE_BRACKET_CLOSE;
                 this->break_constructing = true;
                 return;
             }
         }
         else if(token.type == TokenType::OPERATOR) {
-            auto op = std::make_shared<OperatorFragment>();
-            if (token.value == "+") {
-                op->operator_type = OperatorType::ADD;
-            }
-            else if(token.value == "=") {
-                op->operator_type = OperatorType::ASSIGN;
-            }
-            else if(token.value == "==") {
-                op->operator_type = OperatorType::EQ;
-            }
-            else if(token.value == "<") {
-                op->operator_type = OperatorType::GREATER;
-            }
-            else if(token.value == "*") {
-                op->operator_type = OperatorType::MUL;
-            }
-            else if(token.value == ">") {
-                op->operator_type = OperatorType::LESS;
-            }
-            else if(token.value == "%") {
-                op->operator_type = OperatorType::MODULO;
-            }
-            else if(token.value == "&&") {
-                op->operator_type = OperatorType::AND;
-            }
-            else if(token.value == "||") {
-                op->operator_type = OperatorType::OR;
-            }
 
-            else if(token.value == ".") {
-                op->operator_type = OperatorType::DOT;
-            }
-            else if(token.value == "--") {
-                op->operator_type = OperatorType::DECREMENT;
-                op->is_one_arg = true;
-            }
-            else if(token.value == "++") {
-                op->operator_type = OperatorType::INCREMENT;
-                op->is_one_arg = true;
-            }
-            else if(token.value == "&&") {
-                op->operator_type = OperatorType::ADD;
-            }
-            else if(token.value == "||") {
-                op->operator_type = OperatorType::OR;
-            }
-            else if(token.value == "!") {
-                op->operator_type = OperatorType::NEGATE;
-                op->is_one_arg = true;
-            }
-            else if( token.value == ";") {
+            if( token.value == ";") {
                 break_constructing = true;
                 return;
             }
@@ -313,13 +290,50 @@ void SEQL::ASTCreator::read_fragment() {
                 return;
             }
 
+            auto binary_operators = std::map<std::string, OperatorType> {
+                {"+",  OperatorType::ADD},
+                {"=",  OperatorType::ASSIGN},
+                {"==", OperatorType::EQ},
+                {"<",  OperatorType::GREATER},
+                {"*",  OperatorType::MUL},
+                {">",  OperatorType::LESS},
+                {"%",  OperatorType::MODULO},
+                {"&&", OperatorType::AND},
+                {"||", OperatorType::OR},
+                {".",  OperatorType::DOT},
+            };
+
+
+            auto unary_operators = std::map<std::string, OperatorType> {
+                {"--",  OperatorType::DECREMENT},
+                {"++",  OperatorType::INCREMENT},
+                {"!",  OperatorType::NEGATE},
+            };
+
+            auto op = new OperatorFragment();
+            op->is_one_arg    = unary_operators.count(token.value) == 1;
+            op->operator_type = op->is_one_arg ? unary_operators[token.value] : binary_operators[token.value]; 
+
             op->l_arg = this->last_frag;
             if(!op->is_one_arg) {
                 op->r_arg = next_fragment();
                 if(op->r_arg == nullptr) {
-                    op->r_arg = this->last_frag;
+                    
+                    this->state = ASTState::BROKEN;
+                    
+                    char err_message[512];
+                    std::string snippet = op->l_arg->debug_value + " " + token.value;
+                    snprintf(err_message, sizeof(err_message), "Failed to read next fragment for %s", snippet.c_str());
+                    this->current_error = ASTError(
+                        err_message, this->current_line, true
+                    );
+
+                    this->raise_error();
                 }
-                op->debug_value =  op->l_arg->debug_value + " " + token.value + " " + op->r_arg->debug_value;
+                else
+                {
+                    op->debug_value =  op->l_arg->debug_value + " " + token.value + " " + op->r_arg->debug_value;
+                }
             }
             else  {
                 op->debug_value =  op->l_arg->debug_value;
@@ -330,7 +344,7 @@ void SEQL::ASTCreator::read_fragment() {
         }
         else if(token.type == TokenType::BOOLEAN)
         {
-            this->last_frag = std::make_shared<Value>(token.value);
+            this->last_frag = new Value(token.value);
             this->last_frag->debug_value = token.value;
         }
         else if(token.type == TokenType::VARIABLE)
@@ -338,18 +352,16 @@ void SEQL::ASTCreator::read_fragment() {
             auto var_name = token.value;
 
             if(this->tokens[this->pos].value == "(") {
-                auto function_call = std::make_shared<FunctionCallFragment>();
+                auto function_call = new FunctionCallFragment();
                 read_fragment();
                 function_call->function_name = var_name;
                 function_call->args = read_statement();
                 this->last_frag = function_call;
             }
             else {
-                this->last_frag = std::make_shared<VariableReferenceFragment>(token.value);
+                this->last_frag = new VariableReferenceFragment(token.value);
                 this->last_frag->debug_value = token.value;
             }
-
-
         }
     }
 
@@ -358,9 +370,15 @@ void SEQL::ASTCreator::read_fragment() {
 Token ASTCreator::next(bool move_iter) {
     if(pos < tokens.size()) {
         Token tok = tokens[pos];
-        if(move_iter) {
+        if(tok.value == "\n")
+        {
+            this->current_line++;
             pos++;
+            return next(move_iter);
         }
+
+        if(move_iter) 
+            pos++;
         return tok;
     }
 }
@@ -388,7 +406,6 @@ Statement *ASTCreator::read_statement() {
 
     if(this->semaphore_frag != nullptr) {
         if(this->semaphore_frag->type == FragmentType::BRACKET_OPEN) {
-            this->semaphore_frag.reset();
             this->semaphore_frag = nullptr;
 
             auto next_statement = read_statement();
@@ -400,7 +417,6 @@ Statement *ASTCreator::read_statement() {
         }
         //statement group
         else if(semaphore_frag->type == FragmentType::CURLY_BRACKET_OPEN ) {
-            this->semaphore_frag.reset();
             this->semaphore_frag = nullptr;
 
             auto next_statement = read_statement();
@@ -411,7 +427,6 @@ Statement *ASTCreator::read_statement() {
         }
         //array
         else if(this->semaphore_frag->type == FragmentType::SQUARE_BRACKET_OPEN) {
-            this->semaphore_frag.reset();
             this->semaphore_frag = nullptr;
 
             statement->type = StatementType::ARRAY_STATEMENT;
@@ -428,7 +443,6 @@ Statement *ASTCreator::read_statement() {
                 semaphore_frag->type == FragmentType::BRACKET_CLOSE
                 )
         {
-            this->semaphore_frag.reset();
             this->semaphore_frag = nullptr;
             return nullptr;
         }
@@ -445,20 +459,12 @@ Statement *ASTCreator::read_statement() {
     return statement;
 }
 
-std::shared_ptr<Fragment> ASTCreator::next_fragment() {
+Fragment * ASTCreator::next_fragment() {
     read_fragment();
     return this->last_frag;
 }
 
-void ASTCreator::early_rollback() {
-    delete current_statement;
-
-    for(auto & element : as_tree) {
-        delete element;
-    }
-
-
-
+void ASTCreator::rollback() {
 }
 
 VariableReferenceFragment::VariableReferenceFragment(const std::string &name) {
@@ -472,25 +478,32 @@ Variable::Variable(ValueType type, std::shared_ptr<Value> value_ptr, std::string
 }
 
 Statement::~Statement() {
-//    delete ast_root;
-//    delete condition;
-//    delete on_init;
-//    delete each;
-    //delete child_statement;
+    delete ast_root;
+    delete condition;
+    delete on_init;
+    delete each;
+
+    // child statement is within composed statements
+    // if(child_statement != nullptr)
+    // {
+    //     delete child_statement;
+    // }
+
     for(auto & element : composed_statements) {
-        delete element;
+        if(element != nullptr)
+        {
+            delete element;
+        }
     }
 }
 
 OperatorFragment::~OperatorFragment() {
-    r_arg.reset();
-    l_arg.reset();
+    delete r_arg;
+    delete l_arg;
 }
 
 KeywordFragment::~KeywordFragment() {
-//    for(auto & element : arguments) {
-//        delete element;
-//    }
+
 }
 
 ASTError::ASTError(const std::string &message, int line, bool isCritical) : message(message), line(line),

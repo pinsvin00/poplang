@@ -99,16 +99,14 @@ namespace SEQL {
         ~Statement();
 
         StatementType type = StatementType::NON_SPECIFIED;
-        std::shared_ptr<Fragment> ast_root = nullptr;
+        Fragment* ast_root = nullptr;
         Statement * child_statement = nullptr;
+        Fragment* condition = nullptr;
+        Fragment* on_init = nullptr;
+        Fragment* each = nullptr;
         std::vector<Statement * > composed_statements;
-
-        std::shared_ptr<Fragment> condition = nullptr;
-        std::shared_ptr<Fragment> on_init = nullptr;
-        std::shared_ptr<Fragment> each = nullptr;
-
         //if "if" statement has else, or else if
-        Statement*  continued_statement;
+        Statement*  continued_statement = nullptr;
 
     public:
         bool is_composed = false;
@@ -166,7 +164,7 @@ namespace SEQL {
 
     class KeywordFragment : public Fragment {
     public:
-        std::vector<std::shared_ptr<Fragment>> arguments;
+        std::vector<Fragment*> arguments;
         KeywordType keyword_type = KeywordType::UNSPECIFIED;
 
         ~KeywordFragment();
@@ -185,8 +183,8 @@ namespace SEQL {
 
     class OperatorFragment : public Fragment {
     public:
-        std::shared_ptr<Fragment> l_arg = nullptr;
-        std::shared_ptr<Fragment> r_arg = nullptr;
+        Fragment* l_arg = nullptr;
+        Fragment* r_arg = nullptr;
         OperatorType operator_type = OperatorType::UNSPECIFIED;
         bool is_one_arg = false;
 
@@ -221,8 +219,6 @@ namespace SEQL {
     public:
         ASTError() = default;
         ASTError(const std::string &message, int line, bool isCritical);
-    private:
-
         std::string message;
         int line = -1;
         bool is_critical = false;
@@ -231,22 +227,24 @@ namespace SEQL {
     class ASTCreator {
 
         unsigned int pos = 0;
-        std::shared_ptr<Fragment> last_frag = nullptr;
-        std::shared_ptr<Fragment> semaphore_frag = nullptr;
+        unsigned int current_line = 0;
+        Fragment * last_frag = nullptr;
+        Fragment * semaphore_frag = nullptr;
 
         Statement * last_statement = nullptr;
         Statement * current_statement = nullptr;
 
-        ASTState state;
-        ASTError current_error;
-
 
         Token next(bool move_iter = true);
-        std::shared_ptr<Fragment> next_fragment();
+        Fragment * next_fragment();
         void read_fragment();
-        void early_rollback();
+        void rollback();
+        void raise_error();
     public:
-        std::map<std::string, std::shared_ptr<Function>> declared_functions;
+        ASTState state = ASTState::WORK;
+        ASTError current_error;
+
+        std::map<std::string, Function*> declared_functions;
         ASTCreator() = default;
         std::vector<Token> tokens;
         std::vector<Statement *> as_tree;
@@ -255,7 +253,19 @@ namespace SEQL {
         Statement * read_statement();
 
         ~ASTCreator() {
-            early_rollback();
+            // if(current_statement != nullptr)
+            // {
+            //     delete current_statement;
+            //     current_statement = nullptr;
+            // }
+
+
+            for(auto & element : as_tree) {
+                if(element != nullptr)
+                {
+                    delete element;
+                }
+            }
         }
     };
 }

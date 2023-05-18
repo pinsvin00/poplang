@@ -9,7 +9,12 @@ using namespace std;
 
 int main(int argc, char** argv) {
 
-    if(argc == 2)
+    for(int i = 0 ; i < argc ;i ++)
+    {
+        std::cout << "Argument no. " << i << " " << argv[i] << std::endl;
+    }
+
+    if(argc >= 2)
     {
         std::string file_name = argv[1];
 

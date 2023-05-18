@@ -9,6 +9,13 @@ void SEQL::Engine::execute_file(const std::string& path) {
 
     this->ast_creator->tokens = this->lexer->tokens;
     this->ast_creator->create_ast();
+
+    if(this->ast_creator->state == ASTState::BROKEN)
+    {
+        delete this->ast_creator;
+        return;
+    }
+
     this->functions = this->ast_creator->declared_functions;
     std::cout << "Finished creating AST tree..." << std::endl;
 
@@ -73,15 +80,15 @@ void SEQL::Engine::execute_statement(Statement * statement) {
 }
 
 
-std::shared_ptr<SEQL::Value> SEQL::Engine::eval(std::shared_ptr<Fragment> fragment) {
+std::shared_ptr<SEQL::Value> SEQL::Engine::eval(Fragment* fragment) {
     if(fragment->type == FragmentType::OPERATOR) {
-        return handle_operator( std::static_pointer_cast<OperatorFragment>(fragment));
+        return handle_operator( (OperatorFragment*)(fragment));
     }
     else if(fragment->type == FragmentType::KEYWORD) {
-        return handle_keyword(std::static_pointer_cast<KeywordFragment>(fragment));
+        return handle_keyword( (KeywordFragment*)(fragment));
     }
     else if(fragment->type == FragmentType::STATEMENT_LINK) {
-        auto link = std::static_pointer_cast<ArrayFragment>(fragment);
+        auto link = (ArrayFragment*)(fragment);
         auto array_value =  std::make_shared<Value>();
         array_value->array_statement = link->statement;
         array_value->value_type = ValueType::ARRAY;
@@ -98,17 +105,17 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::eval(std::shared_ptr<Fragment> fragme
         return array_value;
     }
     else if(fragment->type == FragmentType::FUNCTION_CALL) {
-        auto function_call = std::static_pointer_cast<FunctionCallFragment>(fragment);
+        auto function_call = (FunctionCallFragment*)(fragment);
         auto fun = this->functions[function_call->function_name];
 
         auto args =  fun->function_args->composed_statements;
         auto vals = function_call->args->composed_statements;
 
         for(int i = 0 ; i < args.size(); i++) {
-            auto var_frag = std::static_pointer_cast<VariableReferenceFragment>(args[i]->ast_root);
+            auto var_frag = (VariableReferenceFragment*)(args[i]->ast_root);
             auto val = eval(vals[i]->ast_root);
 
-            auto var =  std::make_shared<Variable>();
+            auto var = new Variable();
             var->value = val;
             this->variables[var_frag->name] = var;
 
@@ -117,19 +124,21 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::eval(std::shared_ptr<Fragment> fragme
 
     }
     else if(fragment->type == FragmentType::VARIABLE) {
-        auto variable = std::static_pointer_cast<VariableReferenceFragment>(fragment);
+        auto variable = (VariableReferenceFragment*)fragment;
         auto var_value = this->variables[variable->name]->value;
         return var_value;
     }
     else if(fragment->type == FragmentType::VALUE) {
-        return std::static_pointer_cast<Value>(fragment);
+        auto val_frag = (Value*)fragment;
+        auto shared = std::make_shared<Value>(val_frag->result);
+        return shared;
     }
 
     //non matched
     return nullptr;
 }
 
-bool SEQL::Engine::evals_to_true(std::shared_ptr<Fragment> condition_fragment) {
+bool SEQL::Engine::evals_to_true(Fragment * condition_fragment) {
     auto value = (this->eval(condition_fragment));
     if(value != nullptr && value->result == "true") {
         return true;
