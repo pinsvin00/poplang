@@ -8,6 +8,8 @@
 #include <stack>
 #include <functional>
 #include <memory>
+#include <stdio.h>
+#include <cstring>
 #include "Lexer.hpp"
 
 namespace SEQL {
@@ -66,6 +68,8 @@ namespace SEQL {
         NEGATE,
         MODULO,
         DOT,
+        PLUS_EQUAL,
+        MINUS_EQUAL,
     };
 
     enum class KeywordType {
@@ -130,24 +134,92 @@ namespace SEQL {
 
     class Value : public Fragment {
     public:
-        virtual ~Value() = default;
-        explicit Value(std::string value) : result(std::move(value)) {
+        ~Value() {
+            delete result;
+        };
+        explicit Value(bool tf) 
+        {
             this->type = FragmentType::VALUE;
+            this->value_type = ValueType::BOOL;
+            this->result = new char[1];
+            this->result_sz = 1;
+            this->result[0] = (int)tf;
         }
-        Value(std::shared_ptr<Value> val) {
+        explicit Value(std::string value) {
+            this->type = FragmentType::VALUE;
+            this->value_type = ValueType::STRING;
+            this->result = new char[value.length()];
+            this->result_sz = value.length();
+            memcpy(this->result, value.c_str(), value.length());
+        }
+        explicit Value(int value){
+            this->value_type = ValueType::NUMBER;
+            this->result = new char[sizeof(value)];
+            this->result_sz = sizeof(value);
+            memcpy(&value, result, sizeof(value));
+
+        }
+        explicit Value(char* arr, size_t sz, ValueType val_type, bool copy=true)
+        {
+            this->value_type = val_type;
+            this->result_sz = sz;
+            if(copy)
+            {
+                this->result = new char[sz];
+                memcpy(arr, this->result, sz);
+            }
+            else
+            {
+                this->result = arr;
+            }
+            this->result = arr;
+        }
+        explicit Value(std::shared_ptr<Value> val, bool copy=true) {
             this->type = val->type;
-            this->result = val->result;
-            this->array_values = val->array_values;
+            this->value_type = val->value_type;
+            this->result_sz = val->result_sz;
+            if(val->value_type == ValueType::ARRAY)
+            {
+                if(copy)
+                {
+                    this->array_values = new std::vector<std::shared_ptr<Value>>(val->array_values->size());
+                    for(size_t i = 0; i < val->array_values->size(); i++)
+                    {
+                        auto new_value = std::make_shared<Value>(val->array_values[i], true);;
+                        auto deref = *this->array_values;
+                        deref[i] = new_value;
+                    }
+                }
+                else
+                {
+                    this->array_values = val->array_values;
+                }
+            }
+            else
+            {
+                if(copy)
+                {
+                    this->result = new char[val->result_sz];
+                    memcpy(this->result, val->result , val->result_sz);
+                }
+                else
+                {
+                    this->result = val->result;
+                }
+                this->array_values = val->array_values;
+            }
+
         }
 
         Value() = default;
         ValueType value_type = ValueType::UNSPECIFIED;
 
-        std::string result;
+        size_t result_sz = 0;
+        char* result;
 
         //array value
         Statement * array_statement = nullptr;
-        std::vector<std::shared_ptr<Value>> array_values;
+        std::vector<std::shared_ptr<Value>> * array_values;
 
     };
 

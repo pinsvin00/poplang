@@ -292,6 +292,8 @@ void SEQL::ASTCreator::read_fragment() {
 
             auto binary_operators = std::map<std::string, OperatorType> {
                 {"+",  OperatorType::ADD},
+                {"+=",  OperatorType::PLUS_EQUAL},
+                {"-=",  OperatorType::MINUS_EQUAL},
                 {"=",  OperatorType::ASSIGN},
                 {"==", OperatorType::EQ},
                 {"<",  OperatorType::GREATER},

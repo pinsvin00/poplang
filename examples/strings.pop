@@ -1,0 +1,3 @@
+var a = "some string";
+a += " concating strings is really fun";
+print a;

@@ -15,6 +15,29 @@ std::string rtrim(const std::string &s)
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
+int bytes_to_int(char* buffer)
+{
+    return int((unsigned char)(buffer[0]) << 24 |
+                (unsigned char)(buffer[1]) << 16|
+                (unsigned char)(buffer[2]) << 8 |
+                (unsigned char)(buffer[3]));
+}
+
+char* int_to_bytes(int some)
+{
+    //
+    // 0000 0000 0000 0000
+    char buffer[4] = {
+        (some & 0x000000FF),
+        (some & 0x0000FF00) >> 8,
+        (some & 0x00FF0000) >> 16,
+        (some & 0xFF000000) >> 24,
+    };
+
+    return buffer;
+}
+
+
 void debug_log(const std::string & log) {
 #ifdef DEBUG_LOGGING
     std::cout << "DEBUG LOG : " << log << std::endl;
