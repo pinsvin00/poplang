@@ -17,5 +17,8 @@ void debug_log(const std::string & log);
 bool prefix(const std::string &a, const std::string &b );
 std::vector<char> int_bytes(int param);
 std::vector<char> long_int_bytes(long long int param);
+int bytes_to_int(char* buffer);
+char* int_to_bytes(int some);
+
 
 #endif

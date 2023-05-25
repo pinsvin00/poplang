@@ -29,6 +29,8 @@ void Lexer::tokenize(const std::string& line){
     std::string operators = "()[]{}!+-*/%^&<>=;,. ";
     std::vector<std::string> char2Ops = {
             "++",
+            "+=",
+            "-=",
             "&&",
             "||",
             "<=",
@@ -46,9 +48,7 @@ void Lexer::tokenize(const std::string& line){
     for (size_t i = 0; i < line.size(); i++){
         //change reading of string literal
         if(line[i] == '\"') reading_string_literal = !reading_string_literal;
-        else if(!reading_string_literal) {
-
-
+        if(!reading_string_literal) {
             if( i + 1 < line.size() ) {
                 bool op2_found = false;
                 std::string expectedOp;
@@ -86,7 +86,6 @@ void Lexer::tokenize(const std::string& line){
                 fragment_buffer += line[i];
             }
         }
-
         else {
             fragment_buffer += line[i];
         }
@@ -95,6 +94,12 @@ void Lexer::tokenize(const std::string& line){
     if(!fragment_buffer.empty()){
         auto fragment = Token(fragment_buffer);
         tokens.push_back(fragment);
+    }
+
+
+    for(auto & element : this->tokens)
+    {
+        std::cout << "Token: "<< element.value << " With type " << (int)element.type << std::endl;
     }
 }
 
@@ -129,7 +134,7 @@ Token::Token(std::string val) {
 
     if(val[0] == '"') {
         this->type = TokenType::STRING;
-        this->value = val;
+        this->value = val.substr(1, val.length() - 2);
         return;
     }
 
@@ -140,7 +145,7 @@ Token::Token(std::string val) {
     }
 
     std::map<std::string, int> operator_priority = {
-            {"=", 0}, {"==",0} , {"+", 1}, {"-", 1}, {"*", 2}, {"{", 0}, {"%", 0},
+            {"=", 0}, {"==",0} , {"+", 1}, {"-", 1}, {"*", 2}, {"{", 0}, {"%", 0}, {"+=", 0}, {"-=", 0},
             {",", 3}, {";", 0}, {">", 0}, {"<", 0}, {"++" , 0} , {"--", 0}, {"&&", 0}, {"||", 0},
             {".", 0},
     };

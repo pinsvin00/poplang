@@ -7,17 +7,25 @@
 
 #include "expression_common.hpp"
 #include "Lexer.hpp"
-
+#include "utils.hpp"
 #include <map>
 #include <algorithm>
 
 namespace SEQL {
+
+    class RuntimeSEQLError
+    {
+    public:
+        char message[512];
+        bool is_critical = false;
+    };
+
     class Engine {
         Lexer * lexer;
         ASTCreator * ast_creator;
         bool fatal_error_occured = false;
-
-
+        RuntimeSEQLError error;
+        void raise_error();
         std::vector<std::shared_ptr<Value>> resolve_args(Statement * statement);
 
     public:
