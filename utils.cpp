@@ -15,25 +15,25 @@ std::string rtrim(const std::string &s)
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
-int bytes_to_int(char* buffer)
+
+int32_t bytes_to_int(char* buffer)
 {
-    return int((unsigned char)(buffer[0]) << 24 |
-                (unsigned char)(buffer[1]) << 16|
-                (unsigned char)(buffer[2]) << 8 |
-                (unsigned char)(buffer[3]));
+    int32_t some = 0;
+    some |= (unsigned char)buffer[0];
+    some |= (unsigned char)buffer[1] << 8;
+    some |= (unsigned char)buffer[2] << 16;
+    some |= (unsigned char)buffer[3] << 24;
+
+    return some;
 }
 
-char* int_to_bytes(int some)
+
+char* int_to_bytes(int32_t some)
 {
     //
     // 0000 0000 0000 0000
-    char buffer[4] = {
-        (some & 0x000000FF),
-        (some & 0x0000FF00) >> 8,
-        (some & 0x00FF0000) >> 16,
-        (some & 0xFF000000) >> 24,
-    };
-
+    char * buffer = new char[sizeof(int)];
+    memcpy(buffer, &some, sizeof(int));
     return buffer;
 }
 

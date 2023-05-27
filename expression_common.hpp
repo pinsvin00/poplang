@@ -137,7 +137,7 @@ namespace SEQL {
         ~Value() {
             delete result;
         };
-        explicit Value(bool tf) 
+        Value(bool tf) 
         {
             this->type = FragmentType::VALUE;
             this->value_type = ValueType::BOOL;
@@ -145,22 +145,24 @@ namespace SEQL {
             this->result_sz = 1;
             this->result[0] = (int)tf;
         }
-        explicit Value(std::string value) {
+        Value(std::string value) {
             this->type = FragmentType::VALUE;
             this->value_type = ValueType::STRING;
-            this->result = new char[value.length()];
-            this->result_sz = value.length();
-            memcpy(this->result, value.c_str(), value.length());
+            this->result = new char[value.size() + 1];
+            this->result_sz = value.size() + 1; //include "\0"
+            memcpy(this->result, value.c_str(), value.size() + 1);
         }
-        explicit Value(int value){
+        Value(int32_t value){
+            this->type = FragmentType::VALUE;
             this->value_type = ValueType::NUMBER;
             this->result = new char[sizeof(value)];
             this->result_sz = sizeof(value);
-            memcpy(&value, result, sizeof(value));
+            memcpy(this->result, &value, sizeof(value));
 
         }
-        explicit Value(char* arr, size_t sz, ValueType val_type, bool copy=true)
+        Value(char* arr, size_t sz, ValueType val_type, bool copy=true)
         {
+            this->type = FragmentType::VALUE;
             this->value_type = val_type;
             this->result_sz = sz;
             if(copy)
@@ -174,18 +176,19 @@ namespace SEQL {
             }
             this->result = arr;
         }
-        explicit Value(std::shared_ptr<Value> val, bool copy=true) {
-            this->type = val->type;
+        Value(Value* val, bool copy=true) {
+            this->type = FragmentType::VALUE;
             this->value_type = val->value_type;
             this->result_sz = val->result_sz;
             if(val->value_type == ValueType::ARRAY)
             {
                 if(copy)
                 {
-                    this->array_values = new std::vector<std::shared_ptr<Value>>(val->array_values->size());
+                    this->array_values = new std::vector<Value*>(val->array_values->size());
                     for(size_t i = 0; i < val->array_values->size(); i++)
                     {
-                        auto new_value = std::make_shared<Value>(val->array_values[i], true);;
+                        auto ar_vals = *val->array_values;
+                        auto new_value = new Value(ar_vals[i], copy);;
                         auto deref = *this->array_values;
                         deref[i] = new_value;
                     }
@@ -199,8 +202,8 @@ namespace SEQL {
             {
                 if(copy)
                 {
-                    this->result = new char[val->result_sz];
-                    memcpy(this->result, val->result , val->result_sz);
+                    this->result = new char[result_sz];
+                    memcpy(this->result, val->result , result_sz);
                 }
                 else
                 {
@@ -215,22 +218,22 @@ namespace SEQL {
         ValueType value_type = ValueType::UNSPECIFIED;
 
         size_t result_sz = 0;
-        char* result;
+        char* result = nullptr;
 
         //array value
         Statement * array_statement = nullptr;
-        std::vector<std::shared_ptr<Value>> * array_values;
+        std::vector<Value*> * array_values;
 
     };
 
     class Variable {
     public:
         std::string name;
-        std::shared_ptr<Value> value = nullptr;
+        Value* value = nullptr;
 
-        Variable(ValueType type, std::shared_ptr<Value> value_ptr, std::string name);
+        Variable(ValueType type, Value* value_ptr, std::string name);
         Variable() {
-            this->value = std::make_shared<Value>();
+            this->value = new Value(0);
         };
     };
 
@@ -325,13 +328,6 @@ namespace SEQL {
         Statement * read_statement();
 
         ~ASTCreator() {
-            // if(current_statement != nullptr)
-            // {
-            //     delete current_statement;
-            //     current_statement = nullptr;
-            // }
-
-
             for(auto & element : as_tree) {
                 if(element != nullptr)
                 {
