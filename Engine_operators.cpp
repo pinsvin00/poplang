@@ -3,6 +3,9 @@
 //
 #include "Engine.h"
 
+
+#define CHECK_HOMO_VTYPES(vt,l,r) l->value_type == r->value_type && l->value_type == vt
+
 void SEQL::Engine::raise_error()
 {
     std::cout << error.is_critical ? "CRITICAL : " : " ";
@@ -14,11 +17,10 @@ void SEQL::Engine::raise_error()
     
 }
 
-std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
+SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     auto l = this->eval(frag->l_arg);
     auto r = this->eval(frag->r_arg);
     if (frag->operator_type == OperatorType::ASSIGN) {
-        //ughhhh this will be problematic af!
         *l = *r;
         //assignment produces nothing
         return nullptr; 
@@ -37,19 +39,42 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(SEQL::OperatorFragmen
         }
         return nullptr;
     }
+    else if (frag->operator_type == OperatorType::DECREMENT) {
+
+        if(l->value_type == ValueType::NUMBER)
+        {
+            memcpy(l->result, int_to_bytes(bytes_to_int(l->result) - 1), sizeof(int));
+        }
+        else
+        {
+            sprintf(error.message, "Cannot decrement non number value!");
+            error.is_critical = true;
+            raise_error();
+        }
+        return nullptr;
+    }
     //behavior is different among the types
-    //left mutating operators will be hard as fuck to 
+    //left mutating operators will be hard as fuck to manage
     else if(frag->operator_type == OperatorType::PLUS_EQUAL)
     {
         if(l->value_type == ValueType::NUMBER && l->value_type == r->value_type)
         {
-            memcpy(l->result, int_to_bytes(bytes_to_int(l->result) - bytes_to_int(r->result)), sizeof(int));
+            int32_t r_int = bytes_to_int(r->result);
+            int32_t l_int = bytes_to_int(l->result);
+            memcpy(l->result, int_to_bytes(l_int + r_int), sizeof(int));
         }
         else if(l->value_type == ValueType::STRING && l->value_type == r->value_type)
         {
             std::string result = std::string(l->result) + std::string(r->result);
-            l->result = (char*)realloc(l->result, result.size());
-            l->result_sz = result.size();
+            const char* res_cstr = result.c_str();
+
+            //I should change it to realloc, 
+            free(l->result);
+            l->result = (char*)malloc(strlen(res_cstr) + 1);
+            l->result_sz = strlen(res_cstr) + 1;
+
+            memcpy(l->result, res_cstr, l->result_sz);
+            printf("%s\n", l->result);
         }
         else
         {
@@ -62,12 +87,15 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(SEQL::OperatorFragmen
             error.is_critical = true;
             raise_error();
         }
+        return nullptr;
     }
     else if(frag->operator_type == OperatorType::MINUS_EQUAL)
     {
-        if(l->value_type == ValueType::NUMBER)
+        if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l,r))
         {
-            memcpy(l->result, int_to_bytes(bytes_to_int(l->result) - bytes_to_int(r->result)), sizeof(int));
+            int32_t r_int = bytes_to_int(r->result);
+            int32_t l_int = bytes_to_int(l->result);
+            memcpy(l->result, int_to_bytes(l_int - r_int), sizeof(int));
         }
         else
         {
@@ -90,19 +118,23 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(SEQL::OperatorFragmen
     else if (frag->operator_type == OperatorType::DOT) {
         auto l_val = eval(frag->l_arg);
         //access method from some object
-        if(frag->r_arg->type == FragmentType::FUNCTION_CALL) {
+        if(frag->r_arg->type == FragmentType::FUNCTION_CALL) 
+        {
             auto function_call = (FunctionCallFragment*)(frag->r_arg);
             auto f_name = function_call->function_name;
             auto args = resolve_args(function_call->args);
-            if(l_val->value_type == ValueType::ARRAY) {
-                auto array_value = *l_val;
-                if(f_name == "pop") {
-                    array_value->array_values.pop_back();
+            if(l_val->value_type == ValueType::ARRAY) 
+            {
+                auto arr = *l_val;
+                if(f_name == "pop") 
+                {
+                    arr.array_values->pop_back();
                     return nullptr;
                 }
                 else if(f_name == "append") {
-                    for(auto & element : args) {
-                        array_value->array_values.push_back(std::make_shared<Value>(element));
+                    for(auto & element : args) 
+                    {
+                        arr.array_values->push_back(new Value(element));
                     }
                     return nullptr;
                 }
@@ -114,20 +146,19 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(SEQL::OperatorFragmen
         //access field from some object
         else {
             auto r_val = (VariableReferenceFragment*)(frag->r_arg);
-            if(l_val->value_type == ValueType::STRING) {
-                if(r_val->name == "size") {
-
+            if(l_val->value_type == ValueType::STRING) 
+            {
+                if(r_val->name == "size") 
+                {
+                    return new Value((int32_t)l_val->result_sz);
                 }
             }
-            else if (l_val->value_type == ValueType::ARRAY) {
-                auto array_value = l_val;
-                if(r_val->name == "size") {
-                    auto value = std::make_shared<Value>();
-                    value->result = std::to_string(array_value->array_values.size());
-                    value->value_type = ValueType::NUMBER;
-                    value->type = FragmentType::VALUE;
-
-                    return value;
+            else if (l_val->value_type == ValueType::ARRAY)
+            {
+                auto array_value = *l_val;
+                if(r_val->name == "size") 
+                {
+                    return new Value((int32_t)array_value.array_values->size());
                 }
             }
 
@@ -135,14 +166,10 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(SEQL::OperatorFragmen
 
     }
 
-    //arithmetic operators...
-    auto l = eval(frag->l_arg);
-    auto r = eval(frag->r_arg);
 
     //(INT, INT) (STRING, STRING)
     if( frag->operator_type == OperatorType::GREATER ||
-        frag->operator_type == OperatorType::LESS    ||
-        frag->operator_type == OperatorType::EQ
+        frag->operator_type == OperatorType::LESS 
     ) {
 
         //the base is greater
@@ -150,65 +177,124 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_operator(SEQL::OperatorFragmen
         {
             auto l_val = bytes_to_int(l->result);
             auto r_val = bytes_to_int(r->result);
-            return std::make_shared<Value>(l_val < r_val);
+            if(frag->operator_type == OperatorType::LESS)
+            {
+                return new Value(l_val > r_val);
+            }
+            else if(frag->operator_type == OperatorType::GREATER)
+            {
+                return new Value(l_val < r_val);
+            }
+
         }
         else if(l->value_type == ValueType::STRING && l->value_type == r->value_type)
         {
             auto l_val = std::string(l->result);
             auto r_val = std::string(r->result);
-            return std::make_shared<Value>( strcmp(l->result, r->result) > 0 );
+
+            if(frag->operator_type == OperatorType::LESS)
+            {
+                return new Value( strcmp(l->result, r->result) < 0 );
+            }
+            else if(frag->operator_type == OperatorType::GREATER)
+            {
+                return new Value( strcmp(l->result, r->result) > 0 );
+            }
+
         }
         else
         {
             //raise error
             this->error.is_critical = true;
             sprintf(this->error.message, "Failed to perform GREATER operator, cannot compare (%s) and (%s)",
-                l->value_type, r->value_type);
+                l->value_type, r->value_type
+            );
             raise_error();
-            return  std::make_shared<Value>("null");
+            return  new Value("null");
         }
     }
     //(STRING, STRING) (INT, INT)
     if (frag->operator_type == OperatorType::ADD) {
-        if(l->value_type == ValueType::NUMBER && l->value_type == r->value_type)
+        if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l,r))
         {
-            auto l_val = bytes_to_int(l->result);
-            auto r_val = bytes_to_int(r->result);
-            return std::make_shared<Value>(l_val + r_val);
+            int32_t l_val = bytes_to_int(l->result);
+            int32_t r_val = bytes_to_int(r->result);
+            return new Value(l_val + r_val);
         }
         else if(l->value_type == ValueType::STRING && l->value_type == r->value_type)
         {
-
+            return new Value(std::string(l->result) + std::string(r->result));
+        }
+        else
+        {
+            sprintf(error.message, "Invalid usage of add");
+            error.is_critical = true;
+            raise_error();
         }
     }
     //(INT, INT)
     else if(frag->operator_type == OperatorType::SUB) {
         if(l->value_type == ValueType::NUMBER && l->value_type == r->value_type)
         {
-            auto l_val = bytes_to_int(l->result);
-            auto r_val = bytes_to_int(r->result);
-            return std::make_shared<Value>(l_val - r_val);
+            int32_t l_val = bytes_to_int(l->result);
+            int32_t r_val = bytes_to_int(r->result);
+            return new Value(l_val - r_val);
+        }
+        else
+        {
+            sprintf(error.message, "Invalid usage of \"-\" operator");
+            error.is_critical = true;
+            raise_error();
         }
         
     }
     //(INT, INT)
     else if(frag->operator_type == OperatorType::MODULO) {
-        return std::make_shared<Value>(std::to_string (stoi(l->result) % stoi(r->result) ) );
+        if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l, r))
+        {
+            return new Value(bytes_to_int(l->result) % bytes_to_int(r->result));
+        }
+        else
+        {
+            sprintf(error.message, "Invalid usage of \"%\" operator, expected (INT, INT) got (%s, %s)", l->value_type, r->value_type);
+            error.is_critical = true;
+            raise_error();
+        }
+
     }
     //(INT, INT), (STRING, INT)
     else if(frag->operator_type == OperatorType::MUL) {
-        return std::make_shared<Value>(std::to_string (stoi(l->result) * stoi(r->result) ) );
+        if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l,r))
+        {
+            return new Value(bytes_to_int(l->result) * bytes_to_int(r->result));
+        }
+        else if(l->value_type == ValueType::STRING && r->value_type == ValueType::NUMBER)
+        {
+            std::string base = l->result;
+            std::string res = "";
+            for (size_t i = 0; i < bytes_to_int(r->result); i++)
+            {
+                res += base;
+            }
+            return new Value(res);
+        }
+        else
+        {
+            sprintf(error.message, "Invalid usage of multiply operator");
+            error.is_critical = true;
+            raise_error();
+        }
     }
     //(ANY, ANY)
     else if(frag->operator_type == OperatorType::EQ) {
-        return std::make_shared<Value> (strcmp(l->result, r->result) == 0);
+        return new Value (strcmp(l->result, r->result) == 0);
     }
 
-    return std::make_shared<Value> ("null");
+    return new Value("null");
 }
 
-std::vector<std::shared_ptr<SEQL::Value>> SEQL::Engine::resolve_args(SEQL::Statement *statement) {
-    std::vector<std::shared_ptr<Value>> values;
+std::vector<SEQL::Value*> SEQL::Engine::resolve_args(SEQL::Statement *statement) {
+    std::vector<Value*> values;
     for(auto & element : statement->composed_statements) {
         values.push_back(eval(element->ast_root));
     }

@@ -26,7 +26,7 @@ namespace SEQL {
         bool fatal_error_occured = false;
         RuntimeSEQLError error;
         void raise_error();
-        std::vector<std::shared_ptr<Value>> resolve_args(Statement * statement);
+        std::vector<Value*> resolve_args(Statement * statement);
 
     public:
         Engine();
@@ -36,9 +36,9 @@ namespace SEQL {
         bool break_requested = false;
         bool continue_requested = false;
 
-        std::shared_ptr<Value> handle_operator(OperatorFragment* frag);
-        std::shared_ptr<Value> handle_keyword(KeywordFragment* frag);
-        std::shared_ptr<Value> eval(Fragment * fragment);
+        Value* handle_operator(OperatorFragment* frag);
+        Value* handle_keyword(KeywordFragment* frag);
+        Value* eval(Fragment * fragment);
 
         bool evals_to_true(Fragment* condition_fragment);
 

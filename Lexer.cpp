@@ -29,6 +29,7 @@ void Lexer::tokenize(const std::string& line){
     std::string operators = "()[]{}!+-*/%^&<>=;,. ";
     std::vector<std::string> char2Ops = {
             "++",
+            "--",
             "+=",
             "-=",
             "&&",
@@ -96,11 +97,12 @@ void Lexer::tokenize(const std::string& line){
         tokens.push_back(fragment);
     }
 
-
+#ifdef DEBUG_LEXER
     for(auto & element : this->tokens)
     {
         std::cout << "Token: "<< element.value << " With type " << (int)element.type << std::endl;
     }
+#endif
 }
 
 Token::Token(std::string val) {

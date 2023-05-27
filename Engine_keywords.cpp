@@ -4,11 +4,12 @@
 
 #include "Engine.h"
 
-std::shared_ptr<SEQL::Value> SEQL::Engine::handle_keyword(SEQL::KeywordFragment* frag) {
+SEQL::Value* SEQL::Engine::handle_keyword(SEQL::KeywordFragment* frag) {
     if (frag->keyword_type == KeywordType::VAR) {
         auto value = this->eval(frag->arguments[0]);
-        auto variable_name = value->result;
+        auto variable_name = std::string(value->result);
         auto var = new Variable();
+        var->value = new Value(0);
         var->name = variable_name;
         this->variables[variable_name] = var;
         return var->value;
@@ -24,12 +25,20 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::handle_keyword(SEQL::KeywordFragment*
     else if(frag->keyword_type == KeywordType::INPUT) {
         std::string console_input;
         std::cin >> console_input;
-        return  std::make_shared<Value>(console_input);
+        return new Value(console_input);
     }
     else if(frag->keyword_type == KeywordType::PRINT) {
         auto to_print = frag->arguments[0];
         auto value = this->eval(to_print);
-        std::cout << value->result << std::endl;
+        if(value->value_type == ValueType::NUMBER)
+        {
+            int32_t int_result = bytes_to_int(value->result);
+            printf("%d\n", int_result);
+        }
+        else if(value->value_type == ValueType::STRING)
+        {
+            printf("%s\n", value->result);
+        }
     }
 
 

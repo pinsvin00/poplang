@@ -47,64 +47,75 @@ void SEQL::Engine::execute_statement(Statement * statement) {
                 execute_statement(element->child_statement);
             }
         }
-        else if(break_requested || continue_requested) {
+        else if(break_requested || continue_requested) 
+        {
             return;
         }
-        else if(element->type == StatementType::ARRAY_STATEMENT) {
-            for(const auto & sub_statement : element->child_statement->composed_statements) {
+        else if(element->type == StatementType::ARRAY_STATEMENT) 
+        {
+            for(const auto & sub_statement : element->child_statement->composed_statements) 
+            {
                 this->execute_statement(sub_statement);
             }
         }
         else if(element->type == StatementType::IF_STATEMENT) {
-            if(evals_to_true(element->condition)) {
+            if(evals_to_true(element->condition)) 
+            {
                 execute_statement(element->child_statement);
             }
-            else if(element->continued_statement != nullptr) {
+            else if(element->continued_statement != nullptr) 
+            {
                 //"else statement"
-                if(element->continued_statement == nullptr) {
+                if(element->continued_statement == nullptr) 
+                {
                     execute_statement(element);
                 }
                 //"else if statement"
-                else if(evals_to_true((element->continued_statement->condition))) {
+                else if(evals_to_true((element->continued_statement->condition))) 
+                {
                     execute_statement(element->continued_statement);
                 }
             }
         }
-        else {
+        else 
+        {
             this->eval(element->ast_root);
         }
-
-
-
     }
 }
 
 
-std::shared_ptr<SEQL::Value> SEQL::Engine::eval(Fragment* fragment) {
-    if(fragment->type == FragmentType::OPERATOR) {
+SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
+    if(fragment->type == FragmentType::OPERATOR) 
+    {
         return handle_operator( (OperatorFragment*)(fragment));
     }
-    else if(fragment->type == FragmentType::KEYWORD) {
+    else if(fragment->type == FragmentType::KEYWORD)
+    {
         return handle_keyword( (KeywordFragment*)(fragment));
     }
-    else if(fragment->type == FragmentType::STATEMENT_LINK) {
-        auto link = (ArrayFragment*)(fragment);
-        auto array_value =  std::make_shared<Value>();
+    else if(fragment->type == FragmentType::STATEMENT_LINK) 
+    {
+        ArrayFragment* link = (ArrayFragment*)(fragment);
+        Value* array_value =  new Value();
         array_value->array_statement = link->statement;
         array_value->value_type = ValueType::ARRAY;
 
         array_value->array_statement = link->statement;
-        if(link->statement != nullptr) {
-            if(array_value->array_values.empty()) {
+        if(link->statement != nullptr) 
+        {
+            if(array_value->array_values->empty()) 
+            {
                 for(const auto & element : link->statement->composed_statements) {
-                    array_value->array_values.push_back(this->eval(element->ast_root));
+                    array_value->array_values->push_back(this->eval(element->ast_root));
                 }
             }
 
         }
         return array_value;
     }
-    else if(fragment->type == FragmentType::FUNCTION_CALL) {
+    else if(fragment->type == FragmentType::FUNCTION_CALL) 
+    {
         auto function_call = (FunctionCallFragment*)(fragment);
         auto fun = this->functions[function_call->function_name];
 
@@ -123,24 +134,30 @@ std::shared_ptr<SEQL::Value> SEQL::Engine::eval(Fragment* fragment) {
         this->execute_statement(fun->function_body);
 
     }
-    else if(fragment->type == FragmentType::VARIABLE) {
+    else if(fragment->type == FragmentType::VARIABLE) 
+    {
         auto variable = (VariableReferenceFragment*)fragment;
-        auto var_value = this->variables[variable->name]->value;
-        return var_value;
+        if(this->variables.count(variable->name))
+        {
+            auto var_ref = this->variables[variable->name];
+            auto var_value = var_ref->value;
+            return var_value;
+        }
+
     }
-    else if(fragment->type == FragmentType::VALUE) {
-        auto val_frag = (Value*)fragment;
-        auto shared = std::make_shared<Value>(val_frag->result);
-        return shared;
+    else if(fragment->type == FragmentType::VALUE) 
+    {
+        return new Value((Value*)fragment);
     }
 
     //non matched
     return nullptr;
 }
 
-bool SEQL::Engine::evals_to_true(Fragment * condition_fragment) {
-    auto value = (this->eval(condition_fragment));
-    if(value != nullptr && value->result == "true") {
+bool SEQL::Engine::evals_to_true(Fragment * condition_fragment) 
+{
+    auto value = this->eval(condition_fragment);
+    if(value != nullptr && value->value_type == ValueType::BOOL && value->result[0] == 1) {
         return true;
     }
     return false;

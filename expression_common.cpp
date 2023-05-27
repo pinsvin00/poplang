@@ -38,7 +38,9 @@ void SEQL::ASTCreator::read_fragment() {
         Token token = next();
         //primitives
         if(token.type == TokenType::NUMBER) {
-            this->last_frag = new Value(token.value);
+            int32_t u = std::stoi(token.value.c_str());
+            auto val = new Value(u);
+            this->last_frag = val;
             this->last_frag->debug_value = token.value;
         }
         else if(token.type == TokenType::STRING) {
@@ -221,7 +223,7 @@ void SEQL::ASTCreator::read_fragment() {
                 return;
             }
         }
-        else if (token.type == TokenType::BRACKET) {
+        else if(token.type == TokenType::BRACKET) {
 
             if(token.value == "(") {
                 break_constructing = true;
@@ -346,7 +348,19 @@ void SEQL::ASTCreator::read_fragment() {
         }
         else if(token.type == TokenType::BOOLEAN)
         {
-            this->last_frag = new Value(token.value);
+            if(token.value == "true")
+            {
+                this->last_frag = new Value(true);
+            }
+            else if(token.value == "false")
+            {
+                this->last_frag = new Value(false);
+            }
+            else
+            {
+                this->current_error.message = "Invalid value for boolean";
+                raise_error();
+            }
             this->last_frag->debug_value = token.value;
         }
         else if(token.type == TokenType::VARIABLE)
@@ -474,7 +488,7 @@ VariableReferenceFragment::VariableReferenceFragment(const std::string &name) {
     this->name = name;
 }
 
-Variable::Variable(ValueType type, std::shared_ptr<Value> value_ptr, std::string name) {
+Variable::Variable(ValueType type, Value* value_ptr, std::string name) {
     this->value = value_ptr;
     this->name = std::move(name);
 }
