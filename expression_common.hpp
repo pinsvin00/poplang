@@ -26,7 +26,7 @@ namespace SEQL {
         CURLY_BRACKET_CLOSE,
         BRACKET_OPEN,
         BRACKET_CLOSE,
-
+        PARENTHESES,
         STATEMENT_LINK,
         FUNCTION_CALL,
     };
@@ -124,6 +124,10 @@ namespace SEQL {
 
     class FunctionCallFragment : public Fragment {
     public:
+        ~FunctionCallFragment()
+        {
+            delete args;
+        }
         FunctionCallFragment() {
             this->type = FragmentType::FUNCTION_CALL;
         }
@@ -270,11 +274,23 @@ namespace SEQL {
         }
     };
 
-
-
+    class ParenthesesFragment : public Fragment {
+        public:
+            ~ParenthesesFragment()
+            {
+                delete inner_frag;
+            }
+            explicit ParenthesesFragment(Fragment * frag) : inner_frag(frag){
+                this->type = FragmentType::PARENTHESES;
+            }
+            Fragment * inner_frag = nullptr;
+            void reset() 
+            {
+                delete inner_frag;
+            }
+    };
 
     class ArrayFragment : public Fragment {
-
     public:
         explicit ArrayFragment(Statement * statement) {
             this->statement = statement;

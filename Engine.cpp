@@ -114,6 +114,11 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
         }
         return array_value;
     }
+    else if(fragment->type == FragmentType::PARENTHESES)
+    {
+        ParenthesesFragment* p_frag = (ParenthesesFragment*) fragment;
+        return this->eval(p_frag->inner_frag);
+    }
     else if(fragment->type == FragmentType::FUNCTION_CALL) 
     {
         auto function_call = (FunctionCallFragment*)(fragment);

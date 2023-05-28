@@ -226,10 +226,13 @@ void SEQL::ASTCreator::read_fragment() {
         else if(token.type == TokenType::BRACKET) {
 
             if(token.value == "(") {
-                break_constructing = true;
-                semaphore_frag = new Fragment();
-                semaphore_frag->type = FragmentType::BRACKET_OPEN;
-                return;
+                Fragment* inner_fragment = next_fragment();
+                ParenthesesFragment* frag = new ParenthesesFragment(inner_fragment);
+                this->last_frag = frag;
+
+                this->break_constructing = false;
+                delete semaphore_frag;
+                semaphore_frag = nullptr;
             }
 
             else if(token.value == ")") {
