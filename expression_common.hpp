@@ -188,13 +188,11 @@ namespace SEQL {
             {
                 if(copy)
                 {
-                    this->array_values = new std::vector<Value*>(val->array_values->size());
-                    for(size_t i = 0; i < val->array_values->size(); i++)
+                    this->array_values = new std::vector<Value*>();
+                    auto& values = *val->array_values;
+                    for(size_t i = 0; i < values.size() - 1; i++)
                     {
-                        auto ar_vals = *val->array_values;
-                        auto new_value = new Value(ar_vals[i], copy);;
-                        auto deref = *this->array_values;
-                        deref[i] = new_value;
+                        this->array_values->push_back(new Value(values[i], copy));
                     }
                 }
                 else
@@ -331,6 +329,9 @@ namespace SEQL {
         void read_fragment();
         void rollback();
         void raise_error();
+
+        bool readingFunctionDeclaration = false;
+
     public:
         ASTState state = ASTState::WORK;
         ASTError current_error;

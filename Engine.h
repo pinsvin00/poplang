@@ -20,9 +20,20 @@ namespace SEQL {
         bool is_critical = false;
     };
 
+
+    class Scope 
+    {
+        std::map<std::string, Variable*> * all_variables;
+        std::map<std::string, Variable*> local_variables;
+
+        void drop_local_variables();
+    };
+
     class Engine {
-        Lexer * lexer;
-        ASTCreator * ast_creator;
+        Lexer * lexer = nullptr;
+        ASTCreator * ast_creator = nullptr;
+        Value* stored_value = nullptr; 
+
         bool fatal_error_occured = false;
         RuntimeSEQLError error;
         void raise_error();
@@ -35,6 +46,7 @@ namespace SEQL {
 
         bool break_requested = false;
         bool continue_requested = false;
+        bool return_requested = false;
 
         Value* handle_operator(OperatorFragment* frag);
         Value* handle_keyword(KeywordFragment* frag);

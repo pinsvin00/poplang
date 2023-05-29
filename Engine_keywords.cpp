@@ -18,6 +18,14 @@ SEQL::Value* SEQL::Engine::handle_keyword(SEQL::KeywordFragment* frag) {
         this->continue_requested = true;
         return nullptr;
     }
+    else if(frag->keyword_type == KeywordType::RETURN)
+    {
+        this->stored_value = this->eval(frag->arguments[0]);
+        this->return_requested = true;
+
+        //return prodcues nothing
+        return nullptr;
+    }
     else if(frag->keyword_type == KeywordType::BREAK) {
         this->break_requested = true;
         return nullptr;

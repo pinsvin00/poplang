@@ -153,7 +153,7 @@ Token::Token(std::string val) {
     };
 
     std::map<std::string, int> keyword_priority = {
-            {"input", 0}, {"print", 0}, {"var", 0}, {"if", 0}, {"for", 0}, {"fun", 0},
+            {"input", 0}, {"print", 0}, {"var", 0}, {"if", 0}, {"for", 0}, {"fun", 0}, {"return", 0},
             {"break", 0}, {"continue", 0}, {"else", 0},
     };
 

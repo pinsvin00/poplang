@@ -138,38 +138,43 @@ void SEQL::ASTCreator::read_fragment() {
 
                 this->last_frag = frag;
             }
-            else if(token.value == "return") {
+            else if(token.value == "return" ) {
                 auto return_frag = new KeywordFragment();
                 read_fragment();
                 auto last = this->last_frag;
                 return_frag->keyword_type = KeywordType::RETURN;
                 return_frag->arguments = {last};
-
-                this->last_frag = return_frag;
+                keyword_frag = return_frag;
             }
             else if(token.value == "fun") {
                 auto function = new Function();
-                
-                auto frag = next_fragment();
-                VariableReferenceFragment * function_name = nullptr;
-                if(frag->type != FragmentType::VARIABLE)
+                this->readingFunctionDeclaration = true;
+                auto tok = next();
+                if(tok.type != TokenType::VARIABLE)
                 {
-                    auto name = (VariableReferenceFragment*)(next_fragment());
-                    
-                    raise_error();
-                    return;
-                }   
+                     raise_error();
+                     return;
+                }
 
-
-                function->name = function_name->name;
+                function->name = tok.value;
+                read_fragment();
                 function->function_args = read_statement();
                 read_fragment(); //read {
-                //if last_frag not equal to {
-                //throw error
+                if(semaphore_frag == nullptr || semaphore_frag->type != FragmentType::CURLY_BRACKET_OPEN)
+                {
+                    this->current_error.line = this->current_line;
+                    this->current_error.message = "Expected '{' operator after function declaration";
+                    delete function;
+                    raise_error();
+                    return;
+                }
                 function->function_body = read_statement();
+                delete semaphore_frag;
+                semaphore_frag = nullptr;
 
                 this->declared_functions[function->name] = function;
                 this->last_frag = nullptr;
+                this->readingFunctionDeclaration = false;
                 return;
             }
             else if(token.value == "for") {
@@ -226,13 +231,24 @@ void SEQL::ASTCreator::read_fragment() {
         else if(token.type == TokenType::BRACKET) {
 
             if(token.value == "(") {
-                Fragment* inner_fragment = next_fragment();
-                ParenthesesFragment* frag = new ParenthesesFragment(inner_fragment);
-                this->last_frag = frag;
+                if(!readingFunctionDeclaration)
+                {
+                    Fragment* inner_fragment = next_fragment();
+                    ParenthesesFragment* frag = new ParenthesesFragment(inner_fragment);
+                    this->last_frag = frag;
 
-                this->break_constructing = false;
-                delete semaphore_frag;
-                semaphore_frag = nullptr;
+                    this->break_constructing = false;
+                    delete semaphore_frag;
+                    semaphore_frag = nullptr;
+                }
+                else
+                {
+                    //reading arguments template
+                    semaphore_frag = new Fragment();
+                    semaphore_frag->type = FragmentType::BRACKET_OPEN;
+                    return;
+                }
+
             }
 
             else if(token.value == ")") {
@@ -370,9 +386,12 @@ void SEQL::ASTCreator::read_fragment() {
         {
             auto var_name = token.value;
 
-            if(this->tokens[this->pos].value == "(") {
+            if(this->tokens[this->pos].value == "(" && !readingFunctionDeclaration) {
                 auto function_call = new FunctionCallFragment();
+                //read '('
+                this->readingFunctionDeclaration = true;
                 read_fragment();
+                this->readingFunctionDeclaration = false;
                 function_call->function_name = var_name;
                 function_call->args = read_statement();
                 this->last_frag = function_call;

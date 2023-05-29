@@ -47,6 +47,12 @@ void SEQL::Engine::execute_statement(Statement * statement) {
                 execute_statement(element->child_statement);
             }
         }
+        else if(return_requested)
+        {
+            this->return_requested = false;
+            continue;
+        }
+        //Give control to the for loop?
         else if(break_requested || continue_requested) 
         {
             return;
@@ -82,6 +88,10 @@ void SEQL::Engine::execute_statement(Statement * statement) {
             this->eval(element->ast_root);
         }
     }
+
+    this->return_requested = false;
+    this->break_requested = false;
+    this->continue_requested = false;
 }
 
 
@@ -104,10 +114,12 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
         array_value->array_statement = link->statement;
         if(link->statement != nullptr) 
         {
-            if(array_value->array_values->empty()) 
+            if(array_value->array_values == nullptr) 
             {
+                array_value->array_values = new std::vector<Value*>();
                 for(const auto & element : link->statement->composed_statements) {
-                    array_value->array_values->push_back(this->eval(element->ast_root));
+                    Value * evaluated = this->eval(element->ast_root);
+                    array_value->array_values->push_back(evaluated);
                 }
             }
 
@@ -126,17 +138,42 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
 
         auto args =  fun->function_args->composed_statements;
         auto vals = function_call->args->composed_statements;
+        std::vector<Variable*> created_variables; 
 
         for(int i = 0 ; i < args.size(); i++) {
             auto var_frag = (VariableReferenceFragment*)(args[i]->ast_root);
             auto val = eval(vals[i]->ast_root);
 
             auto var = new Variable();
+
+            created_variables.push_back(var);
+
             var->value = val;
             this->variables[var_frag->name] = var;
 
         }
         this->execute_statement(fun->function_body);
+
+        //drop created variables, they won't be needed
+        for(auto & element : created_variables)
+        {
+            delete element;
+            element = nullptr;
+        }
+
+        if(stored_value != nullptr)
+        {
+            auto value = new Value(stored_value);
+
+            delete stored_value;
+            stored_value = nullptr;
+
+            return value;
+        }
+        else
+        {
+            return nullptr;
+        }
 
     }
     else if(fragment->type == FragmentType::VARIABLE) 

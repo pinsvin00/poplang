@@ -1,0 +1,29 @@
+
+fun tabliczka( a , b , c )
+{
+    var tablica = [ a * 2 , b * 2 , c * 2 ];
+    return tablica;
+}
+
+fun sumka( a , b , c )
+{
+    var result = a + b + c;
+    return result;
+}
+
+
+fun pow(x)
+{
+    var result = x * x;
+
+    for var i = 0; i < 100; i += 1 {
+        result += i;
+    }
+
+    return result;
+}
+
+var testing = tabliczka( 20, 30, 40 );
+var pierwszy = testing[0];
+
+print pierwszy;
