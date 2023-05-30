@@ -8,7 +8,11 @@
 
 void SEQL::Engine::raise_error()
 {
-    std::cout << error.is_critical ? "CRITICAL : " : " ";
+    if(error.is_critical)
+    {
+        std::cout << "CRITICAL : ";
+    }
+
     std::cout << this->error.message << std::endl;
     if(this->error.is_critical)
     {
@@ -18,6 +22,57 @@ void SEQL::Engine::raise_error()
 }
 
 SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
+
+    if (frag->operator_type == OperatorType::DOT) {
+        auto l_val = eval(frag->l_arg);
+        //access method from some object
+        if(frag->r_arg->type == FragmentType::FUNCTION_CALL) 
+        {
+            auto function_call = (FunctionCallFragment*)(frag->r_arg);
+            auto f_name = function_call->function_name;
+            auto args = resolve_args(function_call->args);
+            if(l_val->value_type == ValueType::ARRAY) 
+            {
+                auto arr = *l_val;
+                if(f_name == "pop") 
+                {
+                    arr.array_values->pop_back();
+                    return nullptr;
+                }
+                else if(f_name == "append") {
+                    for(auto & element : args) 
+                    {
+                        arr.array_values->push_back(new Value(element));
+                    }
+                    return nullptr;
+                }
+            }
+            else {
+                //todo
+            }
+        }
+        //access field from some object
+        else {
+            auto r_val = (VariableReferenceFragment*)(frag->r_arg);
+            if(l_val->value_type == ValueType::STRING) 
+            {
+                if(r_val->name == "size") 
+                {
+                    return new Value((int32_t)l_val->result_sz);
+                }
+            }
+            else if (l_val->value_type == ValueType::ARRAY)
+            {
+                auto array_value = *l_val;
+                if(r_val->name == "size") 
+                {
+                    return new Value((int32_t)array_value.array_values->size());
+                }
+            }
+        }
+
+    }
+
     auto l = this->eval(frag->l_arg);
     auto r = this->eval(frag->r_arg);
     if (frag->operator_type == OperatorType::ASSIGN) {
@@ -115,58 +170,6 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         auto deref = *l->array_values;
         return deref[index];
     }
-    else if (frag->operator_type == OperatorType::DOT) {
-        auto l_val = eval(frag->l_arg);
-        //access method from some object
-        if(frag->r_arg->type == FragmentType::FUNCTION_CALL) 
-        {
-            auto function_call = (FunctionCallFragment*)(frag->r_arg);
-            auto f_name = function_call->function_name;
-            auto args = resolve_args(function_call->args);
-            if(l_val->value_type == ValueType::ARRAY) 
-            {
-                auto arr = *l_val;
-                if(f_name == "pop") 
-                {
-                    arr.array_values->pop_back();
-                    return nullptr;
-                }
-                else if(f_name == "append") {
-                    for(auto & element : args) 
-                    {
-                        arr.array_values->push_back(new Value(element));
-                    }
-                    return nullptr;
-                }
-            }
-            else {
-                //todo
-            }
-        }
-        //access field from some object
-        else {
-            auto r_val = (VariableReferenceFragment*)(frag->r_arg);
-            if(l_val->value_type == ValueType::STRING) 
-            {
-                if(r_val->name == "size") 
-                {
-                    return new Value((int32_t)l_val->result_sz);
-                }
-            }
-            else if (l_val->value_type == ValueType::ARRAY)
-            {
-                auto array_value = *l_val;
-                if(r_val->name == "size") 
-                {
-                    return new Value((int32_t)array_value.array_values->size());
-                }
-            }
-
-        }
-
-    }
-
-
     //(INT, INT) (STRING, STRING)
     if( frag->operator_type == OperatorType::GREATER ||
         frag->operator_type == OperatorType::LESS 

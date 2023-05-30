@@ -4,9 +4,10 @@
 - More advanced storing of data (store data in binary) DONE
 - ASTCreator Bugfixes 
 - Rewrite lexer 
-- Scope variable dropping 
+- Scope variable dropping DONE
 - Working integers DONE
 - Working functions DONE
+- String to int, Int to string conversion
 # 0.2
 - Memory leaks
 - Classes

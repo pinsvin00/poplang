@@ -1,5 +1,5 @@
-var c = 0;
-for var i = 0; i < 10; i += 2 {
-    c = i * 3;
-    print c;
-}
+var a = 0;
+var b = a;
+
+a += 1;
+println(b);

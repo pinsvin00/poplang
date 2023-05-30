@@ -61,20 +61,6 @@ void SEQL::ASTCreator::read_fragment() {
                 keyword_frag->arguments = {};
                 keyword_frag->debug_value = "input! ";
             }
-            else if(token.value == "print") {
-                keyword_frag->keyword_type = KeywordType::PRINT;
-                read_fragment();
-                keyword_frag->arguments = { this->last_frag };
-                if(last_frag != nullptr) {
-                    keyword_frag->debug_value = "print! " + this->last_frag->debug_value;
-                }
-                else {
-                    std::cout << "Too few arguments for print" << std::endl;
-                    this->break_constructing = true;
-                    return;
-                }
-
-            }
             else if(token.value == "if") {
                 auto if_statement = this->current_statement;
                 if_statement->is_composed = true;

@@ -11,7 +11,7 @@ SEQL::Value* SEQL::Engine::handle_keyword(SEQL::KeywordFragment* frag) {
         auto var = new Variable();
         var->value = new Value(0);
         var->name = variable_name;
-        this->variables[variable_name] = var;
+        this->scopes[scopes.size() - 1]->local_variables[variable_name] = var;
         return var->value;
     }
     else if(frag->keyword_type == KeywordType::CONTINUE) {

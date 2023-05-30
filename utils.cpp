@@ -35,8 +35,19 @@ char* int_to_bytes(int32_t some)
     char * buffer = new char[sizeof(int)];
     memcpy(buffer, &some, sizeof(int));
     return buffer;
+
 }
 
+
+std::vector<std::string> split(std::string text, char delim) {
+    std::string line;
+    std::vector<std::string> vec;
+    std::stringstream ss(text);
+    while(std::getline(ss, line, delim)) {
+        vec.push_back(line);
+    }
+    return vec;
+}
 
 void debug_log(const std::string & log) {
 #ifdef DEBUG_LOGGING

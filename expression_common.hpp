@@ -87,7 +87,7 @@ namespace SEQL {
         RETURN,
     };
 
-
+    class Engine;
 
     class Fragment {
     public:
@@ -101,7 +101,7 @@ namespace SEQL {
     public:
         Statement() = default;
         ~Statement();
-
+        size_t line_no = 0;
         StatementType type = StatementType::NON_SPECIFIED;
         Fragment* ast_root = nullptr;
         Statement * child_statement = nullptr;
@@ -114,12 +114,6 @@ namespace SEQL {
 
     public:
         bool is_composed = false;
-    };
-
-    struct Function {
-        std::string name;
-        Statement * function_args = nullptr;
-        Statement * function_body = nullptr;
     };
 
     class FunctionCallFragment : public Fragment {
@@ -139,7 +133,7 @@ namespace SEQL {
     class Value : public Fragment {
     public:
         ~Value() {
-            delete result;
+            //delete result;
         };
         Value(bool tf) 
         {
@@ -226,6 +220,14 @@ namespace SEQL {
         Statement * array_statement = nullptr;
         std::vector<Value*> * array_values;
 
+    };
+
+    struct Function {
+        std::string name;
+        bool is_native = false;
+        Value* (*native_templated_func)(std::vector<Value*>, Engine* self) = nullptr;
+        Statement * function_args = nullptr;
+        Statement * function_body = nullptr;
     };
 
     class Variable {

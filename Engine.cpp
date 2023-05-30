@@ -3,6 +3,30 @@
 //
 
 #include "Engine.h"
+#define NATIVE_TEMPLATED_FUNCTION(func) (           \
+    {                                               \
+        Function* f = new Function();               \
+        f->is_native = true;                        \
+        f->native_templated_func = [](std::vector<Value*> vals, Engine * self){\
+            return self->func(vals);                                           \
+        };                                                                     \
+        f;                                                                     \
+    })  
+
+void SEQL::Scope::drop_local_variables()
+{
+    for(auto & element : this->local_variables)
+    {
+        delete element.second;
+        element.second = nullptr;
+    }
+}
+
+
+std::string SEQL::Engine::stringifyValue(Value * val) {
+    std::vector<Value*> v = {val};
+    return str(v)->result;
+}
 
 void SEQL::Engine::execute_file(const std::string& path) {
     this->lexer->tokenize_file(path);
@@ -22,9 +46,25 @@ void SEQL::Engine::execute_file(const std::string& path) {
     auto statement = new Statement();
     statement->is_composed = true;
     statement->composed_statements = this->ast_creator->as_tree;
+
+    this->load_default_functions();
+    this->scopes.push_back(new Scope());
     this->execute_statement(statement);
+    this->scopes[scopes.size()-1]->drop_local_variables();
+    this->scopes.pop_back();
 
     delete this->ast_creator;
+}
+
+
+void SEQL::Engine::load_default_functions() 
+{
+    this->functions["int"] =        NATIVE_TEMPLATED_FUNCTION(to_int);
+    this->functions["str"] =        NATIVE_TEMPLATED_FUNCTION(str);
+    this->functions["typeof"] =     NATIVE_TEMPLATED_FUNCTION(type_of);
+    this->functions["println"] =    NATIVE_TEMPLATED_FUNCTION(println);
+    this->functions["print"] =      NATIVE_TEMPLATED_FUNCTION(print);
+    this->functions["format"] =     NATIVE_TEMPLATED_FUNCTION(format);
 }
 
 void SEQL::Engine::execute_statement(Statement * statement) {
@@ -32,6 +72,7 @@ void SEQL::Engine::execute_statement(Statement * statement) {
 
     for(const auto & element : statement->composed_statements) {
         if(element->type == StatementType::FOR_STATEMENT) {
+            this->scopes.push_back(new Scope());
             for (eval(element->on_init)
             ; evals_to_true(element->condition)
             ; eval(element->each) )
@@ -44,8 +85,13 @@ void SEQL::Engine::execute_statement(Statement * statement) {
                     continue_requested = false;
                     continue;
                 }
+                this->scopes.push_back(new Scope());
                 execute_statement(element->child_statement);
+                this->scopes[scopes.size() - 1]->drop_local_variables();
+                this->scopes.pop_back();
             }
+            this->scopes[scopes.size() - 1]->drop_local_variables();
+            this->scopes.pop_back();
         }
         else if(return_requested)
         {
@@ -65,6 +111,7 @@ void SEQL::Engine::execute_statement(Statement * statement) {
             }
         }
         else if(element->type == StatementType::IF_STATEMENT) {
+            this->scopes.push_back(new Scope());
             if(evals_to_true(element->condition)) 
             {
                 execute_statement(element->child_statement);
@@ -82,6 +129,9 @@ void SEQL::Engine::execute_statement(Statement * statement) {
                     execute_statement(element->continued_statement);
                 }
             }
+            scopes[scopes.size() - 1]->drop_local_variables();
+            delete this->scopes[scopes.size() - 1];
+            scopes.pop_back();
         }
         else 
         {
@@ -135,56 +185,74 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
     {
         auto function_call = (FunctionCallFragment*)(fragment);
         auto fun = this->functions[function_call->function_name];
-
-        auto args =  fun->function_args->composed_statements;
         auto vals = function_call->args->composed_statements;
-        std::vector<Variable*> created_variables; 
 
-        for(int i = 0 ; i < args.size(); i++) {
-            auto var_frag = (VariableReferenceFragment*)(args[i]->ast_root);
-            auto val = eval(vals[i]->ast_root);
-
-            auto var = new Variable();
-
-            created_variables.push_back(var);
-
-            var->value = val;
-            this->variables[var_frag->name] = var;
-
-        }
-        this->execute_statement(fun->function_body);
-
-        //drop created variables, they won't be needed
-        for(auto & element : created_variables)
-        {
-            delete element;
-            element = nullptr;
-        }
-
-        if(stored_value != nullptr)
-        {
-            auto value = new Value(stored_value);
-
-            delete stored_value;
-            stored_value = nullptr;
-
-            return value;
+        if(fun->is_native)
+        {   
+            std::vector<Value*> evaluated;
+            for(int i = 0 ; i < vals.size(); i++) {
+                evaluated.push_back(eval(vals[i]->ast_root));
+            }
+            auto result = fun->native_templated_func(evaluated, this);
+            // for(auto & element : evaluated){
+            //     delete element;
+            // }
+            return result;
         }
         else
         {
-            return nullptr;
-        }
+            auto args =  fun->function_args->composed_statements;
+            std::vector<Variable*> created_variables; 
+            Scope * scope = new Scope();
 
+            for(int i = 0 ; i < args.size(); i++) {
+                auto var_frag = (VariableReferenceFragment*)(args[i]->ast_root);
+                auto val = eval(vals[i]->ast_root);
+                auto var = new Variable();
+
+                var->value = val;
+                scope->local_variables[var_frag->name] = var;
+
+            }
+            this->scopes.push_back(scope);
+            this->execute_statement(fun->function_body);
+
+            if(stored_value != nullptr)
+            {
+                auto value = new Value(stored_value);
+
+                delete stored_value;
+                stored_value = nullptr;
+                this->scopes[scopes.size()-1]->drop_local_variables();
+                this->scopes.pop_back();
+                return value;
+            }
+            else
+            {
+                this->scopes[scopes.size()-1]->drop_local_variables();
+                this->scopes.pop_back();
+                return nullptr;
+            }
+        }
     }
     else if(fragment->type == FragmentType::VARIABLE) 
     {
         auto variable = (VariableReferenceFragment*)fragment;
-        if(this->variables.count(variable->name))
+
+        for (int i = scopes.size() - 1; i >= 0; i--)
         {
-            auto var_ref = this->variables[variable->name];
-            auto var_value = var_ref->value;
-            return var_value;
+            auto & element = scopes[i];
+            if(element->local_variables.count(variable->name) != 0)
+            {
+                auto var_ref = element->local_variables[variable->name];
+                auto var_value = var_ref->value;
+                return var_value;
+            }
         }
+
+        this->error.is_critical = true;
+        sprintf(this->error.message, "Failed to find variable with name %s \n", variable->name.c_str());
+        raise_error();
 
     }
     else if(fragment->type == FragmentType::VALUE) 

@@ -8,6 +8,7 @@
 #include "expression_common.hpp"
 #include "Lexer.hpp"
 #include "utils.hpp"
+#include <string>
 #include <map>
 #include <algorithm>
 
@@ -23,6 +24,7 @@ namespace SEQL {
 
     class Scope 
     {
+    public:
         std::map<std::string, Variable*> * all_variables;
         std::map<std::string, Variable*> local_variables;
 
@@ -33,11 +35,12 @@ namespace SEQL {
         Lexer * lexer = nullptr;
         ASTCreator * ast_creator = nullptr;
         Value* stored_value = nullptr; 
-
+        std::vector<Scope*> scopes;
         bool fatal_error_occured = false;
         RuntimeSEQLError error;
         void raise_error();
         std::vector<Value*> resolve_args(Statement * statement);
+        void load_default_functions();
 
     public:
         Engine();
@@ -56,6 +59,16 @@ namespace SEQL {
 
         std::map<std::string, Variable*> variables;
         std::map<std::string, Function*> functions;
+
+        Value * str(std::vector<SEQL::Value *> val);
+        Value * to_int(std::vector<SEQL::Value *> val);
+        Value * type_of(std::vector<SEQL::Value *> val);
+        Value * format(std::vector<SEQL::Value*> args);
+        Value * println(std::vector<SEQL::Value *> val);
+        Value * print(std::vector<SEQL::Value *> val);
+
+        std::string stringifyValue(Value* val);
+
     };
 }
 
