@@ -75,10 +75,15 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
 
     auto l = this->eval(frag->l_arg);
     auto r = this->eval(frag->r_arg);
+    Value * result = nullptr;
+
     if (frag->operator_type == OperatorType::ASSIGN) {
         *l = *r;
-        //assignment produces nothing
-        return nullptr; 
+
+        //DO NOT delete L value! It will be stored by variable!
+        delete r;
+        //Assignment produces nothing
+        return nullptr;
     }
     else if (frag->operator_type == OperatorType::INCREMENT) {
 
@@ -92,7 +97,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             error.is_critical = true;
             raise_error();
         }
-        return nullptr;
+        result = nullptr;
     }
     else if (frag->operator_type == OperatorType::DECREMENT) {
 
@@ -106,10 +111,9 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             error.is_critical = true;
             raise_error();
         }
-        return nullptr;
+        result = nullptr;
     }
     //behavior is different among the types
-    //left mutating operators will be hard as fuck to manage
     else if(frag->operator_type == OperatorType::PLUS_EQUAL)
     {
         if(l->value_type == ValueType::NUMBER && l->value_type == r->value_type)
@@ -142,6 +146,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             error.is_critical = true;
             raise_error();
         }
+        delete r;
         return nullptr;
     }
     else if(frag->operator_type == OperatorType::MINUS_EQUAL)
@@ -168,7 +173,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         auto r = eval(frag->r_arg);
         auto index = bytes_to_int(r->result);
         auto deref = *l->array_values;
-        return deref[index];
+        result = deref[index];
     }
     //(INT, INT) (STRING, STRING)
     if( frag->operator_type == OperatorType::GREATER ||
@@ -182,11 +187,11 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             auto r_val = bytes_to_int(r->result);
             if(frag->operator_type == OperatorType::LESS)
             {
-                return new Value(l_val > r_val);
+                result = new Value(l_val > r_val);
             }
             else if(frag->operator_type == OperatorType::GREATER)
             {
-                return new Value(l_val < r_val);
+                result = new Value(l_val < r_val);
             }
 
         }
@@ -197,11 +202,11 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
 
             if(frag->operator_type == OperatorType::LESS)
             {
-                return new Value( strcmp(l->result, r->result) < 0 );
+                result = new Value( strcmp(l->result, r->result) < 0 );
             }
             else if(frag->operator_type == OperatorType::GREATER)
             {
-                return new Value( strcmp(l->result, r->result) > 0 );
+                result = new Value( strcmp(l->result, r->result) > 0 );
             }
 
         }
@@ -213,20 +218,19 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
                 l->value_type, r->value_type
             );
             raise_error();
-            return  new Value("null");
         }
     }
     //(STRING, STRING) (INT, INT)
-    if (frag->operator_type == OperatorType::ADD) {
+    else if (frag->operator_type == OperatorType::ADD) {
         if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l,r))
         {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
-            return new Value(l_val + r_val);
+            result = new Value(l_val + r_val);
         }
         else if(l->value_type == ValueType::STRING && l->value_type == r->value_type)
         {
-            return new Value(std::string(l->result) + std::string(r->result));
+            result = new Value(std::string(l->result) + std::string(r->result));
         }
         else
         {
@@ -241,7 +245,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
-            return new Value(l_val - r_val);
+            result = new Value(l_val - r_val);
         }
         else
         {
@@ -255,7 +259,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     else if(frag->operator_type == OperatorType::MODULO) {
         if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l, r))
         {
-            return new Value(bytes_to_int(l->result) % bytes_to_int(r->result));
+            result = new Value(bytes_to_int(l->result) % bytes_to_int(r->result));
         }
         else
         {
@@ -269,7 +273,9 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     else if(frag->operator_type == OperatorType::MUL) {
         if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l,r))
         {
-            return new Value(bytes_to_int(l->result) * bytes_to_int(r->result));
+            int32_t l_val = bytes_to_int(l->result);
+            int32_t r_val = bytes_to_int(r->result);
+            result = new Value( l_val * r_val);
         }
         else if(l->value_type == ValueType::STRING && r->value_type == ValueType::NUMBER)
         {
@@ -279,7 +285,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             {
                 res += base;
             }
-            return new Value(res);
+            result = new Value(res);
         }
         else
         {
@@ -290,10 +296,17 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     }
     //(ANY, ANY)
     else if(frag->operator_type == OperatorType::EQ) {
-        return new Value (strcmp(l->result, r->result) == 0);
+        result = new Value (strcmp(l->result, r->result) == 0);
     }
 
-    return new Value("null");
+    //delete subproducts
+    // delete l;
+    // delete r;
+
+    // l = nullptr;
+    // r = nullptr;
+
+    return result;
 }
 
 std::vector<SEQL::Value*> SEQL::Engine::resolve_args(SEQL::Statement *statement) {

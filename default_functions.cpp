@@ -19,13 +19,8 @@
         rs;                                         \
     })
 
-SEQL::Value * SEQL::Engine::str(std::vector<SEQL::Value *> val) 
+SEQL::Value * SEQL::Engine::str(SEQL::Value * value)
 {
-    if(val.size() != 1) {
-        raise_error();
-    }
-    auto value = val[0]; //generate copy
-
     if(value->value_type == ValueType::NUMBER)
     {
         int32_t b = bytes_to_int(value->result);
@@ -41,7 +36,16 @@ SEQL::Value * SEQL::Engine::str(std::vector<SEQL::Value *> val)
         return new Value(b == 1 ? "true" : "false");
     }
 
-    //delete value;
+}
+
+SEQL::Value * SEQL::Engine::str(std::vector<SEQL::Value *> val) 
+{
+    if(val.size() != 1) {
+        sprintf(error.message, "Too many arguments for str() functions, expected one.");
+        error.is_critical = true;
+        raise_error();
+    }
+    return str(val[0]);
 }
 
 SEQL::Value * SEQL::Engine::to_int(std::vector<SEQL::Value *> val) 

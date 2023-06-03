@@ -27,7 +27,7 @@ namespace SEQL {
         BRACKET_OPEN,
         BRACKET_CLOSE,
         PARENTHESES,
-        STATEMENT_LINK,
+        ARRAY,
         FUNCTION_CALL,
     };
 
@@ -132,7 +132,7 @@ namespace SEQL {
 
     class Value : public Fragment {
     public:
-        ~Value() {
+        ~Value() {        
             //delete result;
         };
         Value(bool tf) 
@@ -174,7 +174,8 @@ namespace SEQL {
             }
             this->result = arr;
         }
-        Value(Value* val, bool copy=true) {
+        Value(Value* val, bool copy=true)
+        {
             this->type = FragmentType::VALUE;
             this->value_type = val->value_type;
             this->result_sz = val->result_sz;
@@ -212,6 +213,12 @@ namespace SEQL {
 
         Value() = default;
         ValueType value_type = ValueType::UNSPECIFIED;
+
+        //If value is not stored in some variable or is in coded, it should persist
+        bool delete_after_op = false; 
+        //
+        bool is_shared = false;
+
 
         size_t result_sz = 0;
         char* result = nullptr;
@@ -294,7 +301,7 @@ namespace SEQL {
     public:
         explicit ArrayFragment(Statement * statement) {
             this->statement = statement;
-            this->type = FragmentType::STATEMENT_LINK;
+            this->type = FragmentType::ARRAY;
         }
 
         Statement * statement = nullptr;
@@ -336,14 +343,14 @@ namespace SEQL {
 
     public:
         ASTState state = ASTState::WORK;
-        ASTError current_error;
+        ASTError error;
 
         std::map<std::string, Function*> declared_functions;
         ASTCreator() = default;
         std::vector<Token> tokens;
         std::vector<Statement *> as_tree;
         void create_ast();
-        bool break_constructing = false;
+        bool break_statement = false;
         Statement * read_statement();
 
         ~ASTCreator() {

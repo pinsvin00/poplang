@@ -7,7 +7,7 @@
 - Scope variable dropping DONE
 - Working integers DONE
 - Working functions DONE
-- String to int, Int to string conversion
+- String to int, Int to string conversion DONE
 # 0.2
 - Memory leaks
 - Classes

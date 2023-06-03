@@ -36,8 +36,8 @@ SEQL::Value* SEQL::Engine::handle_keyword(SEQL::KeywordFragment* frag) {
         return new Value(console_input);
     }
     else if(frag->keyword_type == KeywordType::PRINT) {
-        auto to_print = frag->arguments[0];
-        auto value = this->eval(to_print);
+        Fragment * to_print = frag->arguments[0];
+        Value * value = this->eval(to_print);
         if(value->value_type == ValueType::NUMBER)
         {
             int32_t int_result = bytes_to_int(value->result);
@@ -47,6 +47,8 @@ SEQL::Value* SEQL::Engine::handle_keyword(SEQL::KeywordFragment* frag) {
         {
             printf("%s\n", value->result);
         }
+
+        delete value;
     }
 
 

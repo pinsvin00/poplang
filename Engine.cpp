@@ -23,9 +23,8 @@ void SEQL::Scope::drop_local_variables()
 }
 
 
-std::string SEQL::Engine::stringifyValue(Value * val) {
-    std::vector<Value*> v = {val};
-    return str(v)->result;
+std::string SEQL::Engine::stringifyValue(Value * value) {
+    return str(value)->result;
 }
 
 void SEQL::Engine::execute_file(const std::string& path) {
@@ -50,8 +49,7 @@ void SEQL::Engine::execute_file(const std::string& path) {
     this->load_default_functions();
     this->scopes.push_back(new Scope());
     this->execute_statement(statement);
-    this->scopes[scopes.size()-1]->drop_local_variables();
-    this->scopes.pop_back();
+    drop_last_scope();
 
     delete this->ast_creator;
 }
@@ -87,11 +85,9 @@ void SEQL::Engine::execute_statement(Statement * statement) {
                 }
                 this->scopes.push_back(new Scope());
                 execute_statement(element->child_statement);
-                this->scopes[scopes.size() - 1]->drop_local_variables();
-                this->scopes.pop_back();
+                drop_last_scope();
             }
-            this->scopes[scopes.size() - 1]->drop_local_variables();
-            this->scopes.pop_back();
+            drop_last_scope();
         }
         else if(return_requested)
         {
@@ -115,23 +111,25 @@ void SEQL::Engine::execute_statement(Statement * statement) {
             if(evals_to_true(element->condition)) 
             {
                 execute_statement(element->child_statement);
+                continue;
             }
             else if(element->continued_statement != nullptr) 
             {
                 //"else statement"
-                if(element->continued_statement == nullptr) 
+                if(element->continued_statement->type == StatementType::ELSE_STATEMENT) 
                 {
-                    execute_statement(element);
+                    execute_statement(element->continued_statement->child_statement);
                 }
                 //"else if statement"
-                else if(evals_to_true((element->continued_statement->condition))) 
+                else if(
+                    element->continued_statement->type == StatementType::ELSE_IF_STATEMENT && 
+                    evals_to_true((element->continued_statement->condition))
+                ) 
                 {
-                    execute_statement(element->continued_statement);
+                    execute_statement(element->continued_statement->child_statement);
                 }
             }
-            scopes[scopes.size() - 1]->drop_local_variables();
-            delete this->scopes[scopes.size() - 1];
-            scopes.pop_back();
+            drop_last_scope();
         }
         else 
         {
@@ -144,6 +142,15 @@ void SEQL::Engine::execute_statement(Statement * statement) {
     this->continue_requested = false;
 }
 
+void SEQL::Engine::drop_last_scope() 
+{
+    auto & last_scope = this->scopes[scopes.size()-1];
+    last_scope->drop_local_variables();
+    this->scopes.pop_back();
+
+    delete last_scope;
+}
+
 
 SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
     if(fragment->type == FragmentType::OPERATOR) 
@@ -154,7 +161,7 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
     {
         return handle_keyword( (KeywordFragment*)(fragment));
     }
-    else if(fragment->type == FragmentType::STATEMENT_LINK) 
+    else if(fragment->type == FragmentType::ARRAY) 
     {
         ArrayFragment* link = (ArrayFragment*)(fragment);
         Value* array_value =  new Value();
@@ -167,13 +174,21 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
             if(array_value->array_values == nullptr) 
             {
                 array_value->array_values = new std::vector<Value*>();
-                for(const auto & element : link->statement->composed_statements) {
+                for(const auto & element : link->statement->composed_statements) 
+                {
                     Value * evaluated = this->eval(element->ast_root);
                     array_value->array_values->push_back(evaluated);
                 }
             }
 
         }
+        else
+        {
+            sprintf(error.message, "Failed to resolve array."); 
+            raise_error();
+        }
+
+
         return array_value;
     }
     else if(fragment->type == FragmentType::PARENTHESES)
@@ -183,14 +198,15 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
     }
     else if(fragment->type == FragmentType::FUNCTION_CALL) 
     {
-        auto function_call = (FunctionCallFragment*)(fragment);
-        auto fun = this->functions[function_call->function_name];
-        auto vals = function_call->args->composed_statements;
+        FunctionCallFragment * function_call = (FunctionCallFragment*)(fragment);
+        Function * fun = this->functions[function_call->function_name];
+        std::vector<Statement*> vals = function_call->args->composed_statements;
 
         if(fun->is_native)
         {   
             std::vector<Value*> evaluated;
-            for(int i = 0 ; i < vals.size(); i++) {
+            for(int i = 0 ; i < vals.size(); i++) 
+            {
                 evaluated.push_back(eval(vals[i]->ast_root));
             }
             auto result = fun->native_templated_func(evaluated, this);
@@ -201,7 +217,7 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
         }
         else
         {
-            auto args =  fun->function_args->composed_statements;
+            auto args = fun->function_args->composed_statements;
             std::vector<Variable*> created_variables; 
             Scope * scope = new Scope();
 
@@ -217,28 +233,18 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
             this->scopes.push_back(scope);
             this->execute_statement(fun->function_body);
 
-            if(stored_value != nullptr)
-            {
-                auto value = new Value(stored_value);
+            drop_last_scope();
 
-                delete stored_value;
-                stored_value = nullptr;
-                this->scopes[scopes.size()-1]->drop_local_variables();
-                this->scopes.pop_back();
-                return value;
-            }
-            else
-            {
-                this->scopes[scopes.size()-1]->drop_local_variables();
-                this->scopes.pop_back();
-                return nullptr;
-            }
+            Value * result =  stored_value != nullptr ? stored_value : nullptr;
+            stored_value = nullptr;
+            return result;
         }
     }
     else if(fragment->type == FragmentType::VARIABLE) 
     {
         auto variable = (VariableReferenceFragment*)fragment;
 
+        //reverse iterate through last scopes;
         for (int i = scopes.size() - 1; i >= 0; i--)
         {
             auto & element = scopes[i];
@@ -257,7 +263,9 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
     }
     else if(fragment->type == FragmentType::VALUE) 
     {
-        return new Value((Value*)fragment);
+        //Duplicate value, very important!
+        Value * new_value = new Value((Value*)fragment);
+        return new_value;
     }
 
     //non matched
@@ -266,7 +274,7 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
 
 bool SEQL::Engine::evals_to_true(Fragment * condition_fragment) 
 {
-    auto value = this->eval(condition_fragment);
+    Value* value = this->eval(condition_fragment);
     if(value != nullptr && value->value_type == ValueType::BOOL && value->result[0] == 1) {
         return true;
     }

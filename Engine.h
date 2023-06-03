@@ -39,6 +39,7 @@ namespace SEQL {
         bool fatal_error_occured = false;
         RuntimeSEQLError error;
         void raise_error();
+        void drop_last_scope();
         std::vector<Value*> resolve_args(Statement * statement);
         void load_default_functions();
 
@@ -61,6 +62,7 @@ namespace SEQL {
         std::map<std::string, Function*> functions;
 
         Value * str(std::vector<SEQL::Value *> val);
+        Value * str(SEQL::Value * val);
         Value * to_int(std::vector<SEQL::Value *> val);
         Value * type_of(std::vector<SEQL::Value *> val);
         Value * format(std::vector<SEQL::Value*> args);
