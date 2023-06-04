@@ -1,5 +1,27 @@
+
+fun is_prime_naive(num) {
+
+    var is_prime = true;
+    for var i = 2; i < num; i += 1 {
+        if (num % i) == 0 {
+            is_prime = false;
+            break;
+        }
+    }
+
+    return is_prime;
+}
+
 for var i = 1; i < 100; i += 1 {
     for var j = 1; j < 100; j += 1 {
-        println( format("$_ * $_ = $_", i, j, i*j) );
+        if (i % 2) == 0 {
+            println( format("$_ * $_ = $_", i, j, i*j) );
+        }
+        else {
+            var is_prime = is_prime_naive(i);
+            if is_prime {
+                println( format("$_ is a prime number") )
+            }
+        }
     }
 }

@@ -133,7 +133,7 @@ namespace SEQL {
     class Value : public Fragment {
     public:
         ~Value() {        
-            //delete result;
+            delete result;
         };
         Value(bool tf) 
         {
@@ -214,8 +214,8 @@ namespace SEQL {
         Value() = default;
         ValueType value_type = ValueType::UNSPECIFIED;
 
-        //If value is not stored in some variable or is in coded, it should persist
-        bool delete_after_op = false; 
+        //If value is stored in some variable or is in code, it should persist
+        bool dispose = true; 
         //
         bool is_shared = false;
 

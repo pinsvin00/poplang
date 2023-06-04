@@ -207,12 +207,18 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
             std::vector<Value*> evaluated;
             for(int i = 0 ; i < vals.size(); i++) 
             {
-                evaluated.push_back(eval(vals[i]->ast_root));
+                Value * e = eval(vals[i]->ast_root);
+                e->dispose = false;
+                evaluated.push_back(e);
             }
             auto result = fun->native_templated_func(evaluated, this);
-            // for(auto & element : evaluated){
-            //     delete element;
-            // }
+            for(auto & element : evaluated)
+            {
+                if(element->dispose){
+                    delete element;
+                }
+
+            }
             return result;
         }
         else
@@ -224,6 +230,7 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
             for(int i = 0 ; i < args.size(); i++) {
                 auto var_frag = (VariableReferenceFragment*)(args[i]->ast_root);
                 auto val = eval(vals[i]->ast_root);
+                val->dispose = false;
                 auto var = new Variable();
 
                 var->value = val;

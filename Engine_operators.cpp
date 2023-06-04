@@ -79,9 +79,16 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
 
     if (frag->operator_type == OperatorType::ASSIGN) {
         *l = *r;
-
+        l->dispose = false;
         //DO NOT delete L value! It will be stored by variable!
-        delete r;
+        if(r->dispose)
+        {
+            r->array_statement = nullptr;
+            r->array_values = nullptr;
+            r->result = nullptr;
+            delete r;
+        }
+
         //Assignment produces nothing
         return nullptr;
     }
@@ -146,7 +153,11 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             error.is_critical = true;
             raise_error();
         }
-        delete r;
+        if(r->dispose)
+        {
+            delete r;
+        }
+
         return nullptr;
     }
     else if(frag->operator_type == OperatorType::MINUS_EQUAL)
@@ -227,10 +238,12 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
             result = new Value(l_val + r_val);
+            result->dispose = true;
         }
         else if(l->value_type == ValueType::STRING && l->value_type == r->value_type)
         {
             result = new Value(std::string(l->result) + std::string(r->result));
+            result->dispose = true;
         }
         else
         {
@@ -246,6 +259,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
             result = new Value(l_val - r_val);
+            result->dispose = true;
         }
         else
         {
@@ -260,6 +274,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l, r))
         {
             result = new Value(bytes_to_int(l->result) % bytes_to_int(r->result));
+            result->dispose = true;
         }
         else
         {
@@ -276,6 +291,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
             result = new Value( l_val * r_val);
+            result->dispose = true;
         }
         else if(l->value_type == ValueType::STRING && r->value_type == ValueType::NUMBER)
         {
@@ -286,6 +302,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
                 res += base;
             }
             result = new Value(res);
+            result->dispose = true;
         }
         else
         {
@@ -300,6 +317,14 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     }
 
     //delete subproducts
+    if(l->dispose) 
+    {
+        delete l;
+    }
+    if(r->dispose) 
+    {
+        delete r;
+    }
     // delete l;
     // delete r;
 

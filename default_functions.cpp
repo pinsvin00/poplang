@@ -6,7 +6,7 @@
         Value* r = eval(v);                         \
         assert(r->value_type == ValueType::STRING); \
         std::string rs = r->result;                 \
-        delete r;                                   \
+        if(r->dispose) delete r;                    \
         rs;                                         \
     })
 
@@ -15,7 +15,7 @@
         Value* r = eval(v);                         \
         assert(r->value_type == ValueType::NUMBER); \
         int32_t rs = bytes_to_int(r->result);       \
-        delete r;                                   \
+        if(r->dispose) delete r;                    \
         rs;                                         \
     })
 
@@ -32,8 +32,9 @@ SEQL::Value * SEQL::Engine::str(SEQL::Value * value)
     }
     else if(value->value_type == ValueType::BOOL)
     {
-        int32_t b = bytes_to_int(value->result);
-        return new Value(b == 1 ? "true" : "false");
+        char st = value->result[0];
+        std::string value = st == 1 ? "true" : "false";
+        return new Value(value);
     }
 
 }
@@ -129,8 +130,8 @@ SEQL::Value * SEQL::Engine::format( std::vector<SEQL::Value*> args)
     auto end = format.find(delim);
     while (end != std::string::npos)
     {
-        if(args.size() < ith_arg) {
-            sprintf(error.message, "Too few arguments for format function");
+        if(args.size() <= ith_arg) {
+            sprintf(error.message, "Too few arguments for \"format\" function");
             error.is_critical = true;
             raise_error();
         }

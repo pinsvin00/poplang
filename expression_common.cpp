@@ -171,13 +171,13 @@ void SEQL::ASTCreator::read_fragment() {
                     raise_error();
                     return;
                 }
+                this->readingFunctionDeclaration = false;
                 function->function_body = read_statement();
                 delete semaphore_frag;
                 semaphore_frag = nullptr;
 
                 this->declared_functions[function->name] = function;
                 this->last_frag = nullptr;
-                this->readingFunctionDeclaration = false;
                 return;
             }
             else if(token.value == "for") {
