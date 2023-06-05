@@ -93,20 +93,23 @@ void SEQL::ASTCreator::read_fragment() {
                 else_statement->condition = nullptr;
 
                 //read semaphore
-                auto frag = next_fragment();
+                Token tok = next();
 
-                if(semaphore_frag != nullptr && semaphore_frag->type == FragmentType::CURLY_BRACKET_OPEN) 
+                if(tok.value == "{") 
                 {
+                    break_statement = true;
+                    semaphore_frag = new Fragment();
+                    semaphore_frag->type = FragmentType::CURLY_BRACKET_OPEN;
                     else_statement->type = StatementType::ELSE_STATEMENT;
                 }
-                else if(frag != nullptr && frag->type == FragmentType::KEYWORD) 
+                else if(tok.value == "if") 
                 { 
                     if(last_if->type == StatementType::ELSE_IF_STATEMENT || last_if->type == StatementType::IF_STATEMENT) {
                         else_statement->type = StatementType::ELSE_IF_STATEMENT;
                         else_statement->condition = next_fragment();
 
-                        read_fragment();
-                        if(semaphore_frag == nullptr || semaphore_frag->type == FragmentType::CURLY_BRACKET_OPEN) {
+                        //read_fragment();
+                        if(semaphore_frag == nullptr || semaphore_frag->type != FragmentType::CURLY_BRACKET_OPEN) {
                             error.message = "Expected { token";
                             error.is_critical = true;    
                             raise_error();
@@ -126,6 +129,7 @@ void SEQL::ASTCreator::read_fragment() {
                 else_statement->child_statement = composed_statement;
                 last_if->continued_statement = else_statement;
 
+                this->current_statement = else_statement;
                 this->last_frag = keyword_frag;
                 this->break_statement = true;
                 return;
@@ -484,6 +488,9 @@ Statement *ASTCreator::read_statement() {
                 semaphore_frag->type == FragmentType::BRACKET_CLOSE
                 )
         {
+            delete statement;
+
+            this->current_statement = last_statement; 
             this->semaphore_frag = nullptr;
             return nullptr;
         }

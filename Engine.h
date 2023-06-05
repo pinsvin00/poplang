@@ -40,6 +40,7 @@ namespace SEQL {
         RuntimeSEQLError error;
         void raise_error();
         void drop_last_scope();
+        void make_new_scope();
         std::vector<Value*> resolve_args(Statement * statement);
         void load_default_functions();
 

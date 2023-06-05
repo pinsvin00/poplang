@@ -22,7 +22,6 @@ void SEQL::Scope::drop_local_variables()
     }
 }
 
-
 std::string SEQL::Engine::stringifyValue(Value * value) {
     return str(value)->result;
 }
@@ -70,7 +69,7 @@ void SEQL::Engine::execute_statement(Statement * statement) {
 
     for(const auto & element : statement->composed_statements) {
         if(element->type == StatementType::FOR_STATEMENT) {
-            this->scopes.push_back(new Scope());
+            make_new_scope();
             for (eval(element->on_init)
             ; evals_to_true(element->condition)
             ; eval(element->each) )
@@ -83,7 +82,7 @@ void SEQL::Engine::execute_statement(Statement * statement) {
                     continue_requested = false;
                     continue;
                 }
-                this->scopes.push_back(new Scope());
+                make_new_scope();
                 execute_statement(element->child_statement);
                 drop_last_scope();
             }
@@ -107,7 +106,7 @@ void SEQL::Engine::execute_statement(Statement * statement) {
             }
         }
         else if(element->type == StatementType::IF_STATEMENT) {
-            this->scopes.push_back(new Scope());
+            make_new_scope();
             if(evals_to_true(element->condition)) 
             {
                 execute_statement(element->child_statement);
@@ -115,18 +114,27 @@ void SEQL::Engine::execute_statement(Statement * statement) {
             }
             else if(element->continued_statement != nullptr) 
             {
-                //"else statement"
-                if(element->continued_statement->type == StatementType::ELSE_STATEMENT) 
+                Statement * if_frag = element->continued_statement;
+                while(if_frag != nullptr) 
                 {
-                    execute_statement(element->continued_statement->child_statement);
-                }
-                //"else if statement"
-                else if(
-                    element->continued_statement->type == StatementType::ELSE_IF_STATEMENT && 
-                    evals_to_true((element->continued_statement->condition))
-                ) 
-                {
-                    execute_statement(element->continued_statement->child_statement);
+                    if(if_frag->type == StatementType::ELSE_STATEMENT)
+                    {
+                        make_new_scope();
+                        execute_statement(if_frag->child_statement);
+                        drop_last_scope();
+                        break;
+                    }
+                    else if(
+                         if_frag->type == StatementType::ELSE_IF_STATEMENT && 
+                        evals_to_true((if_frag->condition))
+                    )
+                    {
+                        make_new_scope();
+                        execute_statement(if_frag->child_statement);
+                        drop_last_scope();
+                        break;
+                    }
+                    if_frag = if_frag->continued_statement;
                 }
             }
             drop_last_scope();
@@ -140,6 +148,11 @@ void SEQL::Engine::execute_statement(Statement * statement) {
     this->return_requested = false;
     this->break_requested = false;
     this->continue_requested = false;
+}
+
+void SEQL::Engine::make_new_scope() 
+{
+    this->scopes.push_back(new Scope());
 }
 
 void SEQL::Engine::drop_last_scope() 
@@ -237,6 +250,7 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
                 scope->local_variables[var_frag->name] = var;
 
             }
+
             this->scopes.push_back(scope);
             this->execute_statement(fun->function_body);
 
