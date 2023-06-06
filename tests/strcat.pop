@@ -1,0 +1,10 @@
+var liczba = 2;
+var string = str(liczba) + "dziala";
+println(string);
+
+if string == "1dziala" {
+    println("ano faktycznie")
+}
+else {
+    println("no nie")
+}

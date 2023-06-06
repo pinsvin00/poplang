@@ -1,0 +1,12 @@
+
+fun some2(a,b) {
+    return a * b;
+}
+
+fun some1(a,b) {
+    return some2(a * b, a + b)
+}
+
+
+var result = some1(3, 4);
+println(result);
