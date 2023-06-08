@@ -1,6 +1,0 @@
-var a = 0;
-a = input;
-
-for var i = 0; i < a; i += 1 {
-    print i;
-}

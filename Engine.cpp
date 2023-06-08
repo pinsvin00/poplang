@@ -39,7 +39,10 @@ void SEQL::Engine::execute_file(const std::string& path) {
     }
 
     this->functions = this->ast_creator->declared_functions;
+    
+    #ifdef DEBUG_LOGGING
     std::cout << "Finished creating AST tree..." << std::endl;
+    #endif
 
     auto statement = new Statement();
     statement->is_composed = true;

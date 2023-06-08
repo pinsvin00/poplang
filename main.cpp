@@ -9,10 +9,12 @@ using namespace std;
 
 int main(int argc, char** argv) {
 
+    #ifdef DEBUG_LOGGING
     for(int i = 0 ; i < argc ;i ++)
     {
         std::cout << "Argument no. " << i << " " << argv[i] << std::endl;
     }
+    #endif
 
     if(argc >= 2)
     {

@@ -14,9 +14,7 @@ for var i = 8 ; i < 100; i += 1 {
     }
 }
 
-print "The prime numbers are";
+println("The prime numbers are");
 for var i = 0; i < primes.size; i += 1 {
-    print primes[i];
+    println(primes[i]);
 }
-
-

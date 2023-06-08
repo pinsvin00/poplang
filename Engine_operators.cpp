@@ -185,6 +185,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         auto index = bytes_to_int(r->result);
         auto deref = *l->array_values;
         result = deref[index];
+        result->dispose = false;
     }
     //(INT, INT) (STRING, STRING)
     if( frag->operator_type == OperatorType::GREATER ||

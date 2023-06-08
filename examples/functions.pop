@@ -27,7 +27,7 @@ var tablica = tabliczka( 20, 30, 40 );
 var pierwszy = tablica[0];
 
 for var i = 0; i < 10; i += 1 {
-    print pow(i);
+    println(pow(i));
 }
 
-print pierwszy;
+println(pierwszy);
