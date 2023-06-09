@@ -29,6 +29,7 @@ namespace SEQL {
         PARENTHESES,
         ARRAY,
         FUNCTION_CALL,
+        ARRAY_ACCESS,
     };
 
     enum class StatementType {
@@ -297,6 +298,19 @@ namespace SEQL {
             }
     };
 
+
+    class ArrayAccessFragment : public Fragment {
+    public:
+        Fragment * array_frag = nullptr;
+        Statement * index_expr = nullptr;
+
+        ArrayAccessFragment()
+        {
+            this->type = FragmentType::ARRAY_ACCESS;
+        }
+
+    };
+
     class ArrayFragment : public Fragment {
     public:
         explicit ArrayFragment(Statement * statement) {
@@ -322,6 +336,17 @@ namespace SEQL {
         bool is_critical = false;
     };
 
+
+    struct ASTScope {
+        Fragment * last_frag = nullptr;
+
+        Statement * last_statement = nullptr;
+        Statement * current_statement = nullptr;
+
+        bool readingFunctionDeclaration = false;
+        bool readingArrayRef = false;
+    };
+
     class ASTCreator {
 
         unsigned int pos = 0;
@@ -332,6 +357,11 @@ namespace SEQL {
         Statement * last_statement = nullptr;
         Statement * current_statement = nullptr;
 
+        std::stack<ASTScope*> scopes;
+
+        ASTScope * new_reader_scope();
+        ASTScope * pop_reader_scope();
+        void load_reader_scope(ASTScope* scope);
 
         Token next(bool move_iter = true);
         Fragment * next_fragment();

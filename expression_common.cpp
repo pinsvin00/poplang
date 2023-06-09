@@ -69,7 +69,9 @@ void SEQL::ASTCreator::read_fragment() {
 
                 read_fragment();
                 auto condition_fragment = this->last_frag;
+                new_reader_scope();
                 auto composed_statement = this->read_statement();
+                pop_reader_scope();
 
                 //now we have to read the next statement
                 if_statement->type = StatementType::IF_STATEMENT;
@@ -123,7 +125,9 @@ void SEQL::ASTCreator::read_fragment() {
                 }
 
                 //semaphore is certainly read
+                new_reader_scope();
                 auto composed_statement = this->read_statement();
+                pop_reader_scope();
 
                 //now we have to read the next statement
                 else_statement->child_statement = composed_statement;
@@ -201,7 +205,10 @@ void SEQL::ASTCreator::read_fragment() {
                     for_statement->each = for_fragments[2];
                     for_statement->is_composed = true;
 
+                    new_reader_scope();
                     auto for_body = this->read_statement();
+                    pop_reader_scope();
+
                     for_statement->child_statement = for_body;
                 }
                 else {
@@ -268,27 +275,34 @@ void SEQL::ASTCreator::read_fragment() {
             if (token.value == "[") {
                 //check if we use access operator, or start array
                 if(this->last_frag != nullptr) {
+                    if(
+                        this->last_frag->type == FragmentType::VARIABLE ||
+                        this->last_frag->type == FragmentType::ARRAY ||
+                        this->last_frag->type == FragmentType::ARRAY_ACCESS
+                    ) {
+                        auto arr_access = new ArrayAccessFragment();
+                        arr_access->array_frag = this->last_frag;
 
-                    bool isArrayValue = false;
-                    if(this->last_frag->type == FragmentType::OPERATOR) {
-                        auto oper = (OperatorFragment*)(this->last_frag);
-                        isArrayValue = oper->operator_type == OperatorType::ARRAY_REFERENCE;
-                    }
+                        semaphore_frag = new Fragment();
+                        semaphore_frag->type = FragmentType::SQUARE_BRACKET_OPEN;
 
-                    if(this->last_frag->type == FragmentType::VARIABLE || this->last_frag->type == FragmentType::ARRAY || isArrayValue) {
-                        auto array_operator = new OperatorFragment();
-                        array_operator->operator_type  = OperatorType::ARRAY_REFERENCE;
-                        array_operator->l_arg = this->last_frag;
-                        
-                        this->readingArrayRef = true;   
-                        array_operator->r_arg = this->next_fragment();
-                        this->readingArrayRef = false;
+                        new_reader_scope();
+                        auto stmt = this->read_statement();
+                        if(stmt->composed_statements.size() != 1)
+                        {
+                            error.message = "Index expression needs to consist of one sub statement";
+                            error.is_critical = true;
+                            raise_error();
+                        }
+                        pop_reader_scope();
 
-                        array_operator->debug_value = array_operator->l_arg->debug_value + array_operator->r_arg->debug_value;
+                        arr_access->index_expr = stmt->composed_statements[0];
+                        arr_access->index_expr->type = StatementType::NON_SPECIFIED;
+                        arr_access->debug_value = arr_access->array_frag->debug_value + "[]";
 
                         this->semaphore_frag = nullptr;
 
-                        this->last_frag = array_operator;
+                        this->last_frag = arr_access;
                         continue;
                     }
                 }
@@ -418,6 +432,36 @@ void SEQL::ASTCreator::read_fragment() {
 
 }
 
+void ASTCreator::load_reader_scope(ASTScope* scope)
+{
+    this->last_statement = scope->current_statement;
+
+    this->last_frag = scope->last_frag;
+
+    this->readingArrayRef = scope->readingArrayRef;
+    this->readingFunctionDeclaration = scope->readingFunctionDeclaration;
+}
+
+
+
+ASTScope * ASTCreator::new_reader_scope()
+{
+    ASTScope * scope = new ASTScope();
+    this->scopes.emplace(scope);
+    load_reader_scope(scope);
+
+    return scope;
+}
+
+ASTScope * ASTCreator::pop_reader_scope()
+{
+    auto scope = scopes.top();
+    scopes.pop();
+    load_reader_scope(scopes.top());
+    return scope;
+}
+
+
 Token ASTCreator::next(bool move_iter) {
     if(pos < tokens.size()) {
         Token tok = tokens[pos];
@@ -435,13 +479,13 @@ Token ASTCreator::next(bool move_iter) {
 }
 
 void ASTCreator::create_ast() {
+    new_reader_scope();
     while(this->pos < tokens.size()) {
         auto statement = read_statement();
         this->last_frag = nullptr;
         if(statement != nullptr) {
             this->as_tree.push_back(statement);
         }
-
     }
 }
 

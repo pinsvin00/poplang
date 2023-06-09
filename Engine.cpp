@@ -67,6 +67,7 @@ void SEQL::Engine::load_default_functions()
     this->functions["format"] =     NATIVE_TEMPLATED_FUNCTION(format);
 }
 
+
 void SEQL::Engine::execute_statement(Statement * statement) {
     if(statement == nullptr) return;
 
@@ -211,6 +212,17 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
     {
         ParenthesesFragment* p_frag = (ParenthesesFragment*) fragment;
         return this->eval(p_frag->inner_frag);
+    }
+    else if (fragment->type == FragmentType::ARRAY_ACCESS) {
+        ArrayAccessFragment * arr_access = (ArrayAccessFragment*) fragment;
+        auto l = eval(arr_access->array_frag);
+        auto r = eval(arr_access->index_expr->ast_root);
+
+        auto index = bytes_to_int(r->result);
+        auto deref = *l->array_values;
+        auto result = deref[index];
+        result->dispose = false;
+        return result;
     }
     else if(fragment->type == FragmentType::FUNCTION_CALL) 
     {

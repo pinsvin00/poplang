@@ -176,17 +176,6 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         }
         return nullptr;
     }
-    else if (frag->operator_type == OperatorType::ARRAY_REFERENCE) {
-        auto l = eval(frag->l_arg);
-        if(l == nullptr) {
-            this->fatal_error_occured = true;
-        }
-        auto r = eval(frag->r_arg);
-        auto index = bytes_to_int(r->result);
-        auto deref = *l->array_values;
-        result = deref[index];
-        result->dispose = false;
-    }
     //(INT, INT) (STRING, STRING)
     if( frag->operator_type == OperatorType::GREATER ||
         frag->operator_type == OperatorType::LESS 
