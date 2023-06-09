@@ -8,7 +8,7 @@
         {
             "name": "(Windows GDB) poplang",
             "cwd": "${workspaceFolder}",
-            "args": ["examples\\test_flow.pop"],
+            "args": ["examples\\functions.pop"],
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}\\build\\popdb.exe",

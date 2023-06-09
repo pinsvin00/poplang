@@ -33,7 +33,7 @@ SEQL::Value* SEQL::Engine::handle_keyword(SEQL::KeywordFragment* frag) {
     else if(frag->keyword_type == KeywordType::INPUT) {
         std::string console_input;
         std::cin >> console_input;
-        return new Value(console_input);
+        return NEW_VALUE(Value(console_input));
     }
     else if(frag->keyword_type == KeywordType::PRINT) {
         Fragment * to_print = frag->arguments[0];
@@ -48,7 +48,7 @@ SEQL::Value* SEQL::Engine::handle_keyword(SEQL::KeywordFragment* frag) {
             printf("%s\n", value->result);
         }
 
-        delete value;
+        //delete value;
     }
 
 

@@ -6,7 +6,6 @@
         Value* r = eval(v);                         \
         assert(r->value_type == ValueType::STRING); \
         std::string rs = r->result;                 \
-        if(r->dispose) delete r;                    \
         rs;                                         \
     })
 
@@ -15,7 +14,6 @@
         Value* r = eval(v);                         \
         assert(r->value_type == ValueType::NUMBER); \
         int32_t rs = bytes_to_int(r->result);       \
-        if(r->dispose) delete r;                    \
         rs;                                         \
     })
 
@@ -59,14 +57,14 @@ SEQL::Value * SEQL::Engine::to_int(std::vector<SEQL::Value *> val)
 
     if(value->value_type == ValueType::NUMBER)
     {
-        delete value;
+        //delete value;
         return new Value(value);
     }
     else if(value->value_type == ValueType::STRING)
     {
         try {
             auto res = std::stoi(value->result);
-            delete value;
+            //delete value;
             return new Value(res);
         }
         catch(std::exception & ex)

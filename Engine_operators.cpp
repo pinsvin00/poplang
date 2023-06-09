@@ -42,7 +42,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
                 else if(f_name == "append") {
                     for(auto & element : args) 
                     {
-                        arr.array_values->push_back(new Value(element));
+                        arr.array_values->push_back(NEW_VALUE(element));
                     }
                     return nullptr;
                 }
@@ -58,7 +58,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             {
                 if(r_val->name == "size") 
                 {
-                    return new Value((int32_t)l_val->result_sz);
+                    return NEW_VALUE((int32_t)l_val->result_sz);
                 }
             }
             else if (l_val->value_type == ValueType::ARRAY)
@@ -66,7 +66,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
                 auto array_value = *l_val;
                 if(r_val->name == "size") 
                 {
-                    return new Value((int32_t)array_value.array_values->size());
+                    return NEW_VALUE((int32_t)array_value.array_values->size());
                 }
             }
         }
@@ -78,18 +78,9 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     Value * result = nullptr;
 
     if (frag->operator_type == OperatorType::ASSIGN) {
-        *l = *r;
-        l->dispose = false;
-        //DO NOT delete L value! It will be stored by variable!
-        if(r->dispose)
-        {
-            r->array_statement = nullptr;
-            r->array_values = nullptr;
-            r->result = nullptr;
-            delete r;
-        }
-
-        //Assignment produces nothing
+        auto val = Value((Value*)r);
+        val.dispose = false;
+        *l = val;
         return nullptr;
     }
     else if (frag->operator_type == OperatorType::INCREMENT) {
@@ -155,7 +146,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         }
         if(r->dispose)
         {
-            delete r;
+            //delete r;
         }
 
         return nullptr;
@@ -188,11 +179,11 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             auto r_val = bytes_to_int(r->result);
             if(frag->operator_type == OperatorType::LESS)
             {
-                result = new Value(l_val > r_val);
+                result = NEW_VALUE(l_val > r_val);
             }
             else if(frag->operator_type == OperatorType::GREATER)
             {
-                result = new Value(l_val < r_val);
+                result = NEW_VALUE(l_val < r_val);
             }
 
         }
@@ -203,11 +194,11 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
 
             if(frag->operator_type == OperatorType::LESS)
             {
-                result = new Value( strcmp(l->result, r->result) < 0 );
+                result = NEW_VALUE( strcmp(l->result, r->result) < 0 );
             }
             else if(frag->operator_type == OperatorType::GREATER)
             {
-                result = new Value( strcmp(l->result, r->result) > 0 );
+                result = NEW_VALUE( strcmp(l->result, r->result) > 0 );
             }
 
         }
@@ -227,12 +218,12 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
-            result = new Value(l_val + r_val);
+            result = NEW_VALUE(l_val + r_val);
             result->dispose = true;
         }
         else if(l->value_type == ValueType::STRING && l->value_type == r->value_type)
         {
-            result = new Value(std::string(l->result) + std::string(r->result));
+            result = NEW_VALUE(std::string(l->result) + std::string(r->result));
             result->dispose = true;
         }
         else
@@ -248,7 +239,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
-            result = new Value(l_val - r_val);
+            result = NEW_VALUE(l_val - r_val);
             result->dispose = true;
         }
         else
@@ -263,7 +254,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     else if(frag->operator_type == OperatorType::MODULO) {
         if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l, r))
         {
-            result = new Value(bytes_to_int(l->result) % bytes_to_int(r->result));
+            result = NEW_VALUE(bytes_to_int(l->result) % bytes_to_int(r->result));
             result->dispose = true;
         }
         else
@@ -280,7 +271,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
-            result = new Value( l_val * r_val);
+            result = NEW_VALUE( l_val * r_val);
             result->dispose = true;
         }
         else if(l->value_type == ValueType::STRING && r->value_type == ValueType::NUMBER)
@@ -291,7 +282,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             {
                 res += base;
             }
-            result = new Value(res);
+            result = NEW_VALUE(res);
             result->dispose = true;
         }
         else
@@ -303,18 +294,18 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     }
     //(ANY, ANY)
     else if(frag->operator_type == OperatorType::EQ) {
-        result = new Value (strcmp(l->result, r->result) == 0);
+        result = NEW_VALUE (strcmp(l->result, r->result) == 0);
     }
 
     //delete subproducts
-    if(l->dispose) 
-    {
-        delete l;
-    }
-    if(r->dispose) 
-    {
-        delete r;
-    }
+    // if(l->dispose) 
+    // {
+    //     delete l;
+    // }
+    // if(r->dispose) 
+    // {
+    //     delete r;
+    // }
     // delete l;
     // delete r;
 

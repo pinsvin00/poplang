@@ -7,12 +7,20 @@
 
 #include "expression_common.hpp"
 #include "Lexer.hpp"
+#include "gc.h"
 #include "utils.hpp"
 #include <string>
 #include <map>
 #include <algorithm>
 
 namespace SEQL {
+
+    #define NEW_VALUE(args...) ({    \
+        Value* val = new Value(args);\
+        gc->reg_val(val);            \
+        val;                         \
+    }                                \
+    )
 
     class RuntimeSEQLError
     {
@@ -33,6 +41,8 @@ namespace SEQL {
 
     class Engine {
         Lexer * lexer = nullptr;
+        GarbageCollector* gc = new GarbageCollector();
+
         ASTCreator * ast_creator = nullptr;
         Value* stored_value = nullptr; 
         std::vector<Scope*> scopes;

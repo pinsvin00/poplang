@@ -29,6 +29,7 @@ namespace SEQL {
         PARENTHESES,
         ARRAY,
         FUNCTION_CALL,
+        DO_FRAGMENT,
         ARRAY_ACCESS,
     };
 
@@ -133,8 +134,11 @@ namespace SEQL {
 
     class Value : public Fragment {
     public:
-        ~Value() {        
-            delete result;
+        ~Value() {
+            if(dispose == true)
+            {
+                delete result;
+            }
         };
         Value(bool tf) 
         {
@@ -226,7 +230,7 @@ namespace SEQL {
 
         //array value
         Statement * array_statement = nullptr;
-        std::vector<Value*> * array_values;
+        std::vector<Value*> * array_values = nullptr;
 
     };
 
@@ -264,8 +268,15 @@ namespace SEQL {
     class VariableReferenceFragment : public Fragment {
     public:
         std::string name;
-    public:
         explicit VariableReferenceFragment(const std::string &name);
+    };
+
+    class DoFragment : public Fragment {
+    public:
+        Statement * stmt;
+        DoFragment(){
+            this->type = FragmentType::DO_FRAGMENT;
+        }
     };
 
     class OperatorFragment : public Fragment {

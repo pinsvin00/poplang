@@ -15,11 +15,11 @@
 
 void SEQL::Scope::drop_local_variables()
 {
-    for(auto & element : this->local_variables)
-    {
-        delete element.second;
-        element.second = nullptr;
-    }
+    // for(auto & element : this->local_variables)
+    // {
+    //     delete element.second;
+    //     element.second = nullptr;
+    // }
 }
 
 std::string SEQL::Engine::stringifyValue(Value * value) {
@@ -110,10 +110,11 @@ void SEQL::Engine::execute_statement(Statement * statement) {
             }
         }
         else if(element->type == StatementType::IF_STATEMENT) {
-            make_new_scope();
             if(evals_to_true(element->condition)) 
             {
+                make_new_scope();
                 execute_statement(element->child_statement);
+                drop_last_scope();
                 continue;
             }
             else if(element->continued_statement != nullptr) 
@@ -141,7 +142,6 @@ void SEQL::Engine::execute_statement(Statement * statement) {
                     if_frag = if_frag->continued_statement;
                 }
             }
-            drop_last_scope();
         }
         else 
         {
@@ -165,7 +165,20 @@ void SEQL::Engine::drop_last_scope()
     last_scope->drop_local_variables();
     this->scopes.pop_back();
 
-    delete last_scope;
+    std::vector<Value*> roots;
+    for (int i = 0; i < scopes.size(); i++)
+    {
+        auto & element = scopes[i];
+        for(auto & val : element->local_variables)
+        {
+            roots.push_back(val.second->value);
+        }
+    }
+    
+    this->gc->set_roots(roots);
+    this->gc->run();
+    
+    //delete last_scope;
 }
 
 
@@ -181,7 +194,7 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
     else if(fragment->type == FragmentType::ARRAY) 
     {
         ArrayFragment* link = (ArrayFragment*)(fragment);
-        Value* array_value =  new Value();
+        Value* array_value = NEW_VALUE();
         array_value->array_statement = link->statement;
         array_value->value_type = ValueType::ARRAY;
 
@@ -224,6 +237,15 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
         result->dispose = false;
         return result;
     }
+    else if(fragment->type == FragmentType::DO_FRAGMENT)
+    {
+        auto do_frag = (DoFragment*) fragment;
+        execute_statement(do_frag->stmt);
+        if(this->stored_value != nullptr) {
+            return this->stored_value;
+        }
+        else return NEW_VALUE("");
+    }
     else if(fragment->type == FragmentType::FUNCTION_CALL) 
     {
         FunctionCallFragment * function_call = (FunctionCallFragment*)(fragment);
@@ -240,13 +262,13 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
                 evaluated.push_back(e);
             }
             auto result = fun->native_templated_func(evaluated, this);
-            for(auto & element : evaluated)
-            {
-                if(element->dispose){
-                    delete element;
-                }
+            // for(auto & element : evaluated)
+            // {
+            //     if(element->dispose){
+            //         delete element;
+            //     }
 
-            }
+            // }
             return result;
         }
         else
@@ -300,7 +322,7 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
     else if(fragment->type == FragmentType::VALUE) 
     {
         //Duplicate value, very important!
-        Value * new_value = new Value((Value*)fragment);
+        Value * new_value = NEW_VALUE((Value*)fragment);
         return new_value;
     }
 

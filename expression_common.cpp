@@ -149,6 +149,14 @@ void SEQL::ASTCreator::read_fragment() {
 
                 this->last_frag = frag;
             }
+            else if(token.value == "do")
+            {
+                auto frag = new DoFragment();
+                read_fragment();
+                frag->stmt = read_statement();
+                this->last_frag = frag;
+                continue;
+            }
             else if(token.value == "return" ) {
                 auto return_frag = new KeywordFragment();
                 read_fragment();
