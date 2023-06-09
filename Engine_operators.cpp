@@ -30,7 +30,7 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         {
             auto function_call = (FunctionCallFragment*)(frag->r_arg);
             auto f_name = function_call->function_name;
-            auto args = resolve_args(function_call->args);
+            //auto args = resolve_args(function_call->args);
             if(l_val->value_type == ValueType::ARRAY) 
             {
                 auto arr = *l_val;
@@ -40,10 +40,13 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
                     return nullptr;
                 }
                 else if(f_name == "append") {
-                    for(auto & element : args) 
-                    {
-                        arr.array_values->push_back(NEW_VALUE(element));
+
+                    std::vector<Value*> args;
+                    for(auto & element : function_call->args->composed_statements) {
+                        Value * val = NEW_VALUE((Value*)eval(element->ast_root));
+                        arr.array_values->push_back(val);
                     }
+
                     return nullptr;
                 }
             }
@@ -219,12 +222,10 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
             result = NEW_VALUE(l_val + r_val);
-            result->dispose = true;
         }
         else if(l->value_type == ValueType::STRING && l->value_type == r->value_type)
         {
             result = NEW_VALUE(std::string(l->result) + std::string(r->result));
-            result->dispose = true;
         }
         else
         {
@@ -240,7 +241,6 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
             result = NEW_VALUE(l_val - r_val);
-            result->dispose = true;
         }
         else
         {
@@ -255,7 +255,6 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
         if(CHECK_HOMO_VTYPES(ValueType::NUMBER, l, r))
         {
             result = NEW_VALUE(bytes_to_int(l->result) % bytes_to_int(r->result));
-            result->dispose = true;
         }
         else
         {
@@ -272,7 +271,6 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
             int32_t l_val = bytes_to_int(l->result);
             int32_t r_val = bytes_to_int(r->result);
             result = NEW_VALUE( l_val * r_val);
-            result->dispose = true;
         }
         else if(l->value_type == ValueType::STRING && r->value_type == ValueType::NUMBER)
         {
@@ -283,7 +281,6 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
                 res += base;
             }
             result = NEW_VALUE(res);
-            result->dispose = true;
         }
         else
         {
@@ -318,7 +315,8 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
 std::vector<SEQL::Value*> SEQL::Engine::resolve_args(SEQL::Statement *statement) {
     std::vector<Value*> values;
     for(auto & element : statement->composed_statements) {
-        values.push_back(eval(element->ast_root));
+        auto val = eval(element->ast_root);
+        values.push_back(val);
     }
     return values;
 }

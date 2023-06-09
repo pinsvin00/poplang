@@ -190,7 +190,7 @@ namespace SEQL {
                 {
                     this->array_values = new std::vector<Value*>();
                     auto& values = *val->array_values;
-                    for(size_t i = 0; i < values.size() - 1; i++)
+                    for(size_t i = 0; i < values.size() ; i++)
                     {
                         this->array_values->push_back(new Value(values[i], copy));
                     }
@@ -221,8 +221,8 @@ namespace SEQL {
 
         //If value is stored in some variable or is in code, it should persist
         bool dispose = true; 
-        //
-        bool is_shared = false;
+        //There are some variables, than can be pre-maturily deleted
+        bool is_mature = true;
 
 
         size_t result_sz = 0;

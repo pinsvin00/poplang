@@ -149,14 +149,14 @@ SEQL::Value * SEQL::Engine::println(std::vector<SEQL::Value *> val)
         raise_error();
     }
     auto r = str(val)->result;
-    printf("%s\n", r);
+    std::cout << r << std::endl;
 }
 SEQL::Value * SEQL::Engine::print(std::vector<SEQL::Value *> val)
 {
     if(val.size() != 1) {
         raise_error();
     }
-    printf("%s", str(val)->result);
+    std::cout << str(val)->result;
 }
 
 // SEQL::Value * SEQL::Engine::set_seed(SEQL::Value * seed)

@@ -166,18 +166,23 @@ void SEQL::Engine::drop_last_scope()
     this->scopes.pop_back();
 
     std::vector<Value*> roots;
-    for (int i = 0; i < scopes.size(); i++)
+    for (size_t i = 0; i < scopes.size(); i++)
     {
-        auto & element = scopes[i];
-        for(auto & val : element->local_variables)
+        Scope * scope = scopes[i];
+        for(auto & element : scope->local_variables)
         {
-            roots.push_back(val.second->value);
+            roots.push_back(element.second->value);
         }
     }
+    if(stored_value != nullptr)
+    {
+        roots.push_back(stored_value);
+    }
+
+    gc->set_roots(roots);
+    gc->run();
     
-    this->gc->set_roots(roots);
-    this->gc->run();
-    
+
     //delete last_scope;
 }
 
@@ -194,7 +199,8 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
     else if(fragment->type == FragmentType::ARRAY) 
     {
         ArrayFragment* link = (ArrayFragment*)(fragment);
-        Value* array_value = NEW_VALUE();
+        Value* array_value = new Value();
+        array_value->is_mature = false;
         array_value->array_statement = link->statement;
         array_value->value_type = ValueType::ARRAY;
 
@@ -207,6 +213,7 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
                 for(const auto & element : link->statement->composed_statements) 
                 {
                     Value * evaluated = this->eval(element->ast_root);
+                    evaluated->is_mature = false;
                     array_value->array_values->push_back(evaluated);
                 }
             }
@@ -217,8 +224,10 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
             sprintf(error.message, "Failed to resolve array."); 
             raise_error();
         }
-
-
+        for(auto & element : *array_value->array_values) {
+            element->is_mature = true;
+        }
+        array_value->is_mature = true;
         return array_value;
     }
     else if(fragment->type == FragmentType::PARENTHESES)
@@ -234,7 +243,6 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
         auto index = bytes_to_int(r->result);
         auto deref = *l->array_values;
         auto result = deref[index];
-        result->dispose = false;
         return result;
     }
     else if(fragment->type == FragmentType::DO_FRAGMENT)
@@ -258,7 +266,6 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
             for(int i = 0 ; i < vals.size(); i++) 
             {
                 Value * e = eval(vals[i]->ast_root);
-                e->dispose = false;
                 evaluated.push_back(e);
             }
             auto result = fun->native_templated_func(evaluated, this);
@@ -276,10 +283,10 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
             auto args = fun->function_args->composed_statements;
             std::vector<Variable*> created_variables; 
             Scope * scope = new Scope();
-
             for(int i = 0 ; i < args.size(); i++) {
                 auto var_frag = (VariableReferenceFragment*)(args[i]->ast_root);
                 auto val = eval(vals[i]->ast_root);
+                val->is_mature = false;
                 val->dispose = false;
                 auto var = new Variable();
 
@@ -289,6 +296,11 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
             }
 
             this->scopes.push_back(scope);
+            for(auto & element : scope->local_variables)
+            {
+                element.second->value->is_mature = true;
+            }
+
             this->execute_statement(fun->function_body);
 
             drop_last_scope();

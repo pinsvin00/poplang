@@ -21,6 +21,7 @@ void GarbageCollector::explore_value(SEQL::Value* value)
 
 void GarbageCollector::run()
 {
+    used_values.clear();
     for(auto & element : roots) {
         explore_value(element);
     }
@@ -41,8 +42,12 @@ void GarbageCollector::finish()
 
     for(auto it = unused_values.begin(); it != unused_values.end(); it++)
     {
-        all_values.erase(*it);
-        delete *it;
+        auto some = *it;
+        if(some->is_mature)
+        {
+            all_values.erase(*it);
+            delete *it;
+        }
     }
 }
 
