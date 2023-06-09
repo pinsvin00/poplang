@@ -19,7 +19,6 @@ int main(int argc, char** argv) {
     if(argc >= 2)
     {
         std::string file_name = argv[1];
-
         SEQL::Engine engn;
         engn.execute_file(file_name);
     }

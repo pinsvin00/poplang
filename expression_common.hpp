@@ -340,6 +340,7 @@ namespace SEQL {
         void raise_error();
 
         bool readingFunctionDeclaration = false;
+        bool readingArrayRef = false;
 
     public:
         ASTState state = ASTState::WORK;
@@ -350,7 +351,7 @@ namespace SEQL {
         std::vector<Token> tokens;
         std::vector<Statement *> as_tree;
         void create_ast();
-        bool break_statement = false;
+        bool finished_reading_stmt = false;
         Statement * read_statement();
 
         ~ASTCreator() {
