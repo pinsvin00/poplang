@@ -72,6 +72,21 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
                     return NEW_VALUE((int32_t)array_value.array_values->size());
                 }
             }
+            else if (l_val->value_type == ValueType::OBJ)
+            {
+                auto obj_value = *l_val->mapped_values;
+                std::string index = r_val->name;
+                if(obj_value.count(index) == 0)
+                {
+                    obj_value[index] = NEW_VALUE();
+                }
+                return obj_value[index];
+            }
+            else {
+                sprintf(error.message, "Invalid value type to use with \".\" operator");
+                error.is_critical = true;
+                raise_error();
+            }
         }
 
     }
@@ -81,7 +96,13 @@ SEQL::Value* SEQL::Engine::handle_operator(SEQL::OperatorFragment* frag) {
     Value * result = nullptr;
 
     if (frag->operator_type == OperatorType::ASSIGN) {
-        auto val = Value((Value*)r);
+        bool copy = true;
+        if(r->value_type == ValueType::OBJ || r->value_type == ValueType::ARRAY)
+        {
+            copy = false;
+        }
+
+        auto val = Value((Value*)r, copy);
         val.dispose = false;
         *l = val;
         return nullptr;

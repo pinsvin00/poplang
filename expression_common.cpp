@@ -428,7 +428,9 @@ void SEQL::ASTCreator::read_fragment() {
                 read_fragment();
                 this->readingFunctionDeclaration = false;
                 function_call->function_name = var_name;
+                new_reader_scope();
                 function_call->args = read_statement();
+                pop_reader_scope();
                 this->last_frag = function_call;
             }
             else {

@@ -79,6 +79,7 @@ namespace SEQL {
         Value * format(std::vector<SEQL::Value*> args);
         Value * println(std::vector<SEQL::Value *> val);
         Value * print(std::vector<SEQL::Value *> val);
+        Value * obj(std::vector<SEQL::Value*> val);
 
         std::string stringifyValue(Value* val);
 

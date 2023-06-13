@@ -13,6 +13,14 @@ void GarbageCollector::explore_value(SEQL::Value* value)
                 explore_value(element);
             }
         }
+        else if(value->mapped_values != nullptr)
+        {
+            auto & deref = *value->mapped_values;
+            for(auto & element : deref)
+            {
+                explore_value(element.second);
+            }
+        }
     }
     else {
         return;

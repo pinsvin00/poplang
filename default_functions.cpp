@@ -22,17 +22,46 @@ SEQL::Value * SEQL::Engine::str(SEQL::Value * value)
     if(value->value_type == ValueType::NUMBER)
     {
         int32_t b = bytes_to_int(value->result);
-        return new Value(std::to_string(b));
+        return NEW_VALUE(std::to_string(b));
     }
     else if(value->value_type == ValueType::STRING)
     {
         return value;
     }
+    //This is very dangerous line, will cause infinite recursion
+    else if(value->value_type == ValueType::ARRAY)
+    {
+        std::string buffer = "[ ";
+        auto deref = value->array_values;
+        for (size_t i = 0; i < deref->size(); i++)
+        {
+            buffer += std::string(str(value->array_values->at(i))->result) + ", ";
+        }
+        buffer.pop_back();
+        buffer.pop_back();
+        buffer += " ]";
+
+        return NEW_VALUE(buffer);
+    }
+    else if(value->value_type == ValueType::OBJ)
+    {
+        std::string buffer = "{";
+        auto & deref = *value->mapped_values;
+        for (auto pair : deref)
+        {
+            buffer +=  "\"" + pair.first + "\"" + " : " + stringifyValue(pair.second) + " , ";
+        }
+        buffer.pop_back();
+        buffer.pop_back();
+        buffer += "}";
+
+        return NEW_VALUE(buffer);
+    }
     else if(value->value_type == ValueType::BOOL)
     {
         char st = value->result[0];
         std::string value = st == 1 ? "true" : "false";
-        return new Value(value);
+        return NEW_VALUE(value);
     }
 
 }
@@ -158,6 +187,16 @@ SEQL::Value * SEQL::Engine::print(std::vector<SEQL::Value *> val)
     }
     std::cout << str(val)->result;
 }
+
+SEQL::Value * SEQL::Engine::obj(std::vector<SEQL::Value*> val)
+{
+    //todo copy object from arguments
+    Value * value = new Value();
+    value->value_type = ValueType::OBJ;
+    value->mapped_values = new std::map<std::string, Value*>();
+    return value;
+}
+
 
 // SEQL::Value * SEQL::Engine::set_seed(SEQL::Value * seed)
 // {

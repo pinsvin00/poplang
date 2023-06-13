@@ -49,6 +49,7 @@ namespace SEQL {
         BOOL,
         ARRAY,
         UNSPECIFIED,
+        OBJ,
     };
 
     enum class OperatorType {
@@ -138,6 +139,8 @@ namespace SEQL {
             if(dispose == true)
             {
                 delete result;
+                delete array_values;
+                delete mapped_values;
             }
         };
         Value(bool tf) 
@@ -200,6 +203,18 @@ namespace SEQL {
                     this->array_values = val->array_values;
                 }
             }
+            else if(val->value_type == ValueType::OBJ)
+            {
+                if(copy)
+                {
+                    //implement this!
+                    this->mapped_values = val->mapped_values;
+                }
+                else
+                {
+                    this->mapped_values = val->mapped_values;
+                }
+            }
             else
             {
                 if(copy)
@@ -231,6 +246,8 @@ namespace SEQL {
         //array value
         Statement * array_statement = nullptr;
         std::vector<Value*> * array_values = nullptr;
+        //todo add better indexing
+        std::map<std::string, Value*> * mapped_values = nullptr;
 
     };
 

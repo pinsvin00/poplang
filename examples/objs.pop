@@ -1,0 +1,11 @@
+
+var some_obj = obj();
+
+some_obj["version"] = "1.1";
+some_obj["is_complex"] = false;
+some_obj["additional_data"] = obj();
+
+some_obj["additional_data"]["address"] = "Negra Arroyo Lane 308";
+some_obj["additional_data"]["name"] = "Walter Hartwell White";
+
+println(some_obj);

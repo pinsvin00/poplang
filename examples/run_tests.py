@@ -37,13 +37,18 @@ def run_and_check_output(cmd, res_file):
 def run_tests():
     output_files, code_files = test_files()
 
-    executable_file = "popdb.exe"
-    if not os.path.isfile("popdb.exe"):
-        try:
-            shutil.copyfile("../build/popdb.exe", "")
-        except:
-            atomic_print("No exectuable was found, build it")
-            return
+    if sys.platform == "win32":
+        executable_file = "popdb.exe"
+    else:
+        executable_file = "podpb"
+
+    os.remove(executable_file)
+    try:
+        shutil.copyfile(f"../build/{executable_file}", "popdb.exe")
+    except RuntimeError as ex:
+         atomic_print(ex)
+         return
+    
     threads = []
     for code_file in code_files:
         expected_output_dir = code_file.replace(".pop", ".txt")

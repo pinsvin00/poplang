@@ -8,14 +8,14 @@
 - Working functions DONE
 - String to int, Int to string conversion DONE
 # 0.2
-- "Bracket results"
-- Garbage collection
+- "Bracket results" DONE
+- Garbage collection DONE
 - Memory leaks
 - Classes/Structs
 - Static checking
 - Better version of vector
-- Objects 
-- Variable shadowing
+- Objects DONE
+- Variable shadowing DONE
 - Lexer fixes
 # 0.3 
 - lambdas, saving function to a variable

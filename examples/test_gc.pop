@@ -1,0 +1,8 @@
+var my_obj = obj();
+
+if true == true {
+    var some_array = [1,2,3,4,5];
+    my_obj["data"] = some_array;
+}
+
+println( my_obj["data"] )

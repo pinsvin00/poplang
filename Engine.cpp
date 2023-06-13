@@ -65,6 +65,7 @@ void SEQL::Engine::load_default_functions()
     this->functions["println"] =    NATIVE_TEMPLATED_FUNCTION(println);
     this->functions["print"] =      NATIVE_TEMPLATED_FUNCTION(print);
     this->functions["format"] =     NATIVE_TEMPLATED_FUNCTION(format);
+    this->functions["obj"] =        NATIVE_TEMPLATED_FUNCTION(obj);
 }
 
 
@@ -240,9 +241,30 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
         auto l = eval(arr_access->array_frag);
         auto r = eval(arr_access->index_expr->ast_root);
 
-        auto index = bytes_to_int(r->result);
-        auto deref = *l->array_values;
-        auto result = deref[index];
+        Value * result = nullptr;
+
+        if(l->array_values != nullptr)
+        {
+            auto index = bytes_to_int(r->result);
+            auto deref = *l->array_values;
+            result = deref[index];
+        }
+        else if(l->mapped_values != nullptr)
+        {
+            std::string index = r->result;
+            std::map<std::string, Value*> & deref = *l->mapped_values;
+            if(deref.count(index) == 0)
+            {
+                deref[index] = NEW_VALUE();
+            }
+            result = deref[index];
+        }
+        else {
+            sprintf(this->error.message, "Cannot access non array/obj value");
+            error.is_critical = true;
+            raise_error();
+        }
+
         return result;
     }
     else if(fragment->type == FragmentType::DO_FRAGMENT)
@@ -260,6 +282,13 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
         Function * fun = this->functions[function_call->function_name];
         std::vector<Statement*> vals = function_call->args->composed_statements;
 
+        if(fun == nullptr)
+        {
+            sprintf(error.message, "There is no function with name %s\n", function_call->function_name);
+            error.is_critical = true;
+            raise_error();
+        }
+
         if(fun->is_native)
         {   
             std::vector<Value*> evaluated;
@@ -269,13 +298,6 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
                 evaluated.push_back(e);
             }
             auto result = fun->native_templated_func(evaluated, this);
-            // for(auto & element : evaluated)
-            // {
-            //     if(element->dispose){
-            //         delete element;
-            //     }
-
-            // }
             return result;
         }
         else
