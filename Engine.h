@@ -13,6 +13,13 @@
 #include <map>
 #include <algorithm>
 
+
+extern int   yylex();
+extern char* yytext;
+extern int   yyleng;
+extern FILE * yyin;
+extern std::vector<Token> __toks;
+
 namespace SEQL {
 
     #define NEW_VALUE(args...) ({    \
@@ -40,7 +47,7 @@ namespace SEQL {
     };
 
     class Engine {
-        Lexer * lexer = nullptr;
+        // Lexer * lexer = nullptr;
         GarbageCollector* gc = new GarbageCollector();
 
         ASTCreator * ast_creator = nullptr;

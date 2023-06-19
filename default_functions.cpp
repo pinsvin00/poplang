@@ -116,6 +116,8 @@ SEQL::Value * SEQL::Engine::to_int(std::vector<SEQL::Value *> val)
     }
 
     delete value;
+
+    return nullptr;
 }
 SEQL::Value * SEQL::Engine::type_of(std::vector<SEQL::Value *> val)
 {

@@ -343,7 +343,7 @@ std::vector<SEQL::Value*> SEQL::Engine::resolve_args(SEQL::Statement *statement)
 }
 
 SEQL::Engine::Engine() {
-    this->lexer = new Lexer();
+    // this->lexer = new Lexer();
     this->ast_creator = new ASTCreator();
 }
 

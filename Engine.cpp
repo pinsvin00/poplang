@@ -27,9 +27,20 @@ std::string SEQL::Engine::stringifyValue(Value * value) {
 }
 
 void SEQL::Engine::execute_file(const std::string& path) {
-    this->lexer->tokenize_file(path);
+    FILE *fp;
+    fp = fopen(path.c_str(),"r");
+    yyin = fp;
 
-    this->ast_creator->tokens = this->lexer->tokens;
+    yylex();
+
+    this->ast_creator->tokens = __toks;
+    #ifdef DEBUG_LEXER
+    for(auto & element : __toks)
+    {
+        std::cout << "Token: "<< element.value << " With type " << (int)element.type << std::endl;
+    }
+    #endif
+
     this->ast_creator->create_ast();
 
     if(this->ast_creator->state == ASTState::BROKEN)
