@@ -22,5 +22,23 @@
                 }
             ],
         },
+
+        {
+            "name": "Linux poplang",
+            "cwd": "${workspaceFolder}",
+            "args": ["examples/test_flow.pop"],
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/popdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+        },
     ]
 }
