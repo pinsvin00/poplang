@@ -25,7 +25,7 @@
         {
             "name": "(Linux GDB) poplang",
             "cwd": "${workspaceFolder}",
-            "args": ["examples/functions.pop"],
+            "args": ["examples/tabliczka_mnozenia.pop"],
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/build/popdb",
