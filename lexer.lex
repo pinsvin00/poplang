@@ -35,7 +35,7 @@ char* substr(const char *src, int m, int n)
 NUMBER    [1-9][0-9]*
 EXPONENT [eE](\+\-)?[1-9]\d*
 STRING   \"([^\\\"]|\\.)*\"
-VARIABLE [a-zA-z_]+[a-zA-z0-9]*
+VARIABLE [a-zA-Z_]+[a-zA-Z_$0-9]
 
 %%
 {NUMBER}+{EXPONENT} {

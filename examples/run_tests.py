@@ -31,7 +31,7 @@ def run_and_check_output(cmd, res_file):
                 atomic_print(f'{cmd} - FAIL')
                 failed_count += 1
     except:
-        atomic_print("Failed to run command", cmd)
+        atomic_print(f"Failed to run command {cmd}")
 
 
 def run_tests():
@@ -40,11 +40,12 @@ def run_tests():
     if sys.platform == "win32":
         executable_file = "popdb.exe"
     else:
-        executable_file = "podpb"
+        executable_file = "popdb"
 
-    os.remove(executable_file)
+    if os.path.isfile(executable_file):
+        os.remove(executable_file)
     try:
-        shutil.copyfile(f"../build/{executable_file}", "popdb.exe")
+        shutil.copyfile(f"../build/{executable_file}", executable_file)
     except RuntimeError as ex:
          atomic_print(ex)
          return
@@ -53,7 +54,10 @@ def run_tests():
     for code_file in code_files:
         expected_output_dir = code_file.replace(".pop", ".txt")
         if expected_output_dir in output_files:
-            thread = Thread(target=run_and_check_output, args=[f'{executable_file} {code_file}', expected_output_dir])
+            if sys.platform == "win32":
+                thread = Thread(target=run_and_check_output, args=[f'{executable_file} {code_file}', expected_output_dir])
+            else:
+                thread = Thread(target=run_and_check_output, args=[f'./{executable_file} {code_file}', expected_output_dir])
             thread.start()
             threads.append(thread)
 

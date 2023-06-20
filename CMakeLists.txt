@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 project(popdb)
 set(CMAKE_CXX_STANDARD 17)
 
-add_compile_definitions(DEBUG_LEXER)
+#add_compile_definitions(DEBUG_LEXER)
 #add_compile_definitions(DEBUG_LOGGING)
 # add the executable
 set_source_files_properties(lex.yy.c PROPERTIES LANGUAGE CXX )
