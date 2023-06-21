@@ -1,0 +1,19 @@
+
+var some_number = 3;
+var some_result = do {
+    if (some_number % 2) == 0 {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+if some_result {
+    var a = 1;
+    var b = 2;
+    var c = 3;
+}
+
+
+println(some_result);

@@ -1,24 +1,20 @@
 var primes = [ 2, 3, 5, 7 ];
-var brek = 2;
-var mod = 1;
-var result = 0;
 
-for var i = 8 ; i < 100; i++ {
-    result = 1;
-    for var j = 0; j < primes.size; j++ {
-        mod = i % primes[j];
-        if mod == 0 {
-            result = 0;
+for var i = 8 ; i < 100; i += 1 {
+    var is_prime = true;
+    for var j = 0; j < primes.size; j += 1 {
+        if ( i % primes[j] ) == 0 {
+            is_prime = false;
             break;
         }
     }
 
-    if result == 1 {
-
-        print i;
+    if is_prime {
         primes.append(i);
     }
-
 }
 
-
+println("The prime numbers are");
+for var i = 0; i < primes.size; i += 1 {
+    println(primes[i]);
+}

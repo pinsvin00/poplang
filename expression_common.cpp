@@ -16,12 +16,13 @@ using namespace SEQL;
  */
 
 
+
 void SEQL::ASTCreator::raise_error()
 {
-    this->break_constructing = true;
+    this->finished_reading_stmt = true;
     this->state = ASTState::BROKEN;
 
-    std::cout << "Line number: " << this->current_error.line << " -> "  << this->current_error.message << std::endl;
+    std::cout << "Line number: " << this->error.line << " -> "  << this->error.message << std::endl;
 }
 
 void SEQL::ASTCreator::read_fragment() {
@@ -29,16 +30,18 @@ void SEQL::ASTCreator::read_fragment() {
     
     if(pos >= tokens.size())
     {
-        break_constructing = true;
+        finished_reading_stmt = true;
         this->last_frag = nullptr;
         return;
     }
 
-    while (pos < tokens.size() && !break_constructing) {
+    while (pos < tokens.size() && !finished_reading_stmt) {
         Token token = next();
         //primitives
         if(token.type == TokenType::NUMBER) {
-            this->last_frag = new Value(token.value);
+            int32_t u = std::stoi(token.value.c_str());
+            auto val = new Value(u);
+            this->last_frag = val;
             this->last_frag->debug_value = token.value;
         }
         else if(token.type == TokenType::STRING) {
@@ -59,20 +62,6 @@ void SEQL::ASTCreator::read_fragment() {
                 keyword_frag->arguments = {};
                 keyword_frag->debug_value = "input! ";
             }
-            else if(token.value == "print") {
-                keyword_frag->keyword_type = KeywordType::PRINT;
-                read_fragment();
-                keyword_frag->arguments = { this->last_frag };
-                if(last_frag != nullptr) {
-                    keyword_frag->debug_value = "print! " + this->last_frag->debug_value;
-                }
-                else {
-                    std::cout << "Too few arguments for print" << std::endl;
-                    this->break_constructing = true;
-                    return;
-                }
-
-            }
             else if(token.value == "if") {
                 auto if_statement = this->current_statement;
                 if_statement->is_composed = true;
@@ -80,7 +69,9 @@ void SEQL::ASTCreator::read_fragment() {
 
                 read_fragment();
                 auto condition_fragment = this->last_frag;
+                new_reader_scope();
                 auto composed_statement = this->read_statement();
+                pop_reader_scope();
 
                 //now we have to read the next statement
                 if_statement->type = StatementType::IF_STATEMENT;
@@ -90,7 +81,7 @@ void SEQL::ASTCreator::read_fragment() {
                 this->current_statement = if_statement;
                 this->last_frag = keyword_frag;
                 //no need to continue, since the statement has been fully read
-                this->break_constructing = true;
+                this->finished_reading_stmt = true;
                 this->semaphore_frag = nullptr;
 
                 return;
@@ -98,31 +89,53 @@ void SEQL::ASTCreator::read_fragment() {
             }
             else if(token.value == "else") {
                 //check if next token is if
-                auto if_statement = this->last_statement;
+                auto last_if = this->last_statement;
                 auto else_statement = this->current_statement;
                 else_statement->is_composed = true;
                 else_statement->condition = nullptr;
 
                 //read semaphore
-                read_fragment();
-                //last fragment isn't semaphore
-                if(last_frag->type == FragmentType::KEYWORD) {
-                    read_fragment();
-                    auto condition = next_fragment();
+                Token tok = next();
+
+                if(tok.value == "{") 
+                {
+                    finished_reading_stmt = true;
+                    semaphore_frag = new Fragment();
+                    semaphore_frag->type = FragmentType::CURLY_BRACKET_OPEN;
+                    else_statement->type = StatementType::ELSE_STATEMENT;
                 }
+                else if(tok.value == "if") 
+                { 
+                    if(last_if->type == StatementType::ELSE_IF_STATEMENT || last_if->type == StatementType::IF_STATEMENT) {
+                        else_statement->type = StatementType::ELSE_IF_STATEMENT;
+                        else_statement->condition = next_fragment();
+
+                        //read_fragment();
+                        if(semaphore_frag == nullptr || semaphore_frag->type != FragmentType::CURLY_BRACKET_OPEN) {
+                            error.message = "Expected { token";
+                            error.is_critical = true;    
+                            raise_error();
+                        }
+                    }
+                    else {
+                        error.message = "Expected last statement to be if or else if";
+                        error.is_critical = true;
+                        raise_error();
+                    }
+                }
+
+                //semaphore is certainly read
+                new_reader_scope();
                 auto composed_statement = this->read_statement();
-
-
+                pop_reader_scope();
 
                 //now we have to read the next statement
-                else_statement->type = StatementType::ELSE_STATEMENT;
                 else_statement->child_statement = composed_statement;
+                last_if->continued_statement = else_statement;
 
-                if_statement->continued_statement = else_statement;
-
+                this->current_statement = else_statement;
                 this->last_frag = keyword_frag;
-                //no need to continue, since the statement has been fully read
-                this->break_constructing = true;
+                this->finished_reading_stmt = true;
                 return;
 
             }
@@ -136,35 +149,48 @@ void SEQL::ASTCreator::read_fragment() {
 
                 this->last_frag = frag;
             }
-            else if(token.value == "return") {
+            else if(token.value == "do")
+            {
+                auto frag = new DoFragment();
+                read_fragment();
+                frag->stmt = read_statement();
+                this->last_frag = frag;
+                continue;
+            }
+            else if(token.value == "return" ) {
                 auto return_frag = new KeywordFragment();
                 read_fragment();
                 auto last = this->last_frag;
                 return_frag->keyword_type = KeywordType::RETURN;
                 return_frag->arguments = {last};
-
-                this->last_frag = return_frag;
+                keyword_frag = return_frag;
             }
             else if(token.value == "fun") {
                 auto function = new Function();
-                
-                auto frag = next_fragment();
-                VariableReferenceFragment * function_name = nullptr;
-                if(frag->type != FragmentType::VARIABLE)
+                this->readingFunctionDeclaration = true;
+                auto tok = next();
+                if(tok.type != TokenType::VARIABLE)
                 {
-                    auto name = (VariableReferenceFragment*)(next_fragment());
-                    
-                    raise_error();
-                    return;
-                }   
+                     raise_error();
+                     return;
+                }
 
-
-                function->name = function_name->name;
+                function->name = tok.value;
+                read_fragment();
                 function->function_args = read_statement();
                 read_fragment(); //read {
-                //if last_frag not equal to {
-                //throw error
+                if(semaphore_frag == nullptr || semaphore_frag->type != FragmentType::CURLY_BRACKET_OPEN)
+                {
+                    this->error.line = this->current_line;
+                    this->error.message = "Expected '{' operator after function declaration";
+                    delete function;
+                    raise_error();
+                    return;
+                }
+                this->readingFunctionDeclaration = false;
                 function->function_body = read_statement();
+                delete semaphore_frag;
+                semaphore_frag = nullptr;
 
                 this->declared_functions[function->name] = function;
                 this->last_frag = nullptr;
@@ -175,7 +201,7 @@ void SEQL::ASTCreator::read_fragment() {
                 for (int i = 0; i < 3; ++i) {
                     read_fragment();
                     for_fragments.push_back(this->last_frag);
-                    break_constructing = false;
+                    finished_reading_stmt = false;
                 }
                 auto for_statement = this->current_statement;
                 if(for_statement != nullptr && for_fragments.size() == 3) {
@@ -187,20 +213,23 @@ void SEQL::ASTCreator::read_fragment() {
                     for_statement->each = for_fragments[2];
                     for_statement->is_composed = true;
 
+                    new_reader_scope();
                     auto for_body = this->read_statement();
+                    pop_reader_scope();
+
                     for_statement->child_statement = for_body;
                 }
                 else {
                     
-                    this->current_error = ASTError("Failed to read for statement fragment was null", this->current_line, true);
-                    this->break_constructing = true;
+                    this->error = ASTError("Failed to read for statement fragment was null", this->current_line, true);
+                    this->finished_reading_stmt = true;
                     this->state = ASTState::BROKEN;
                     raise_error();
                     return;
                 }
 
                 this->last_frag = keyword_frag;
-                this->break_constructing = true;
+                this->finished_reading_stmt = true;
                 this->semaphore_frag = nullptr;
 
                 return;
@@ -209,29 +238,43 @@ void SEQL::ASTCreator::read_fragment() {
         }
         else if(token.type == TokenType::CURLY_BRACKET) {
             if(token.value == "{") {
-                break_constructing = true;
+                finished_reading_stmt = true;
                 semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::CURLY_BRACKET_OPEN;
                 return;
             }
             else if(token.value == "}") {
-                break_constructing = true;
+                finished_reading_stmt = true;
                 semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::CURLY_BRACKET_CLOSE;
                 return;
             }
         }
-        else if (token.type == TokenType::BRACKET) {
+        else if(token.type == TokenType::BRACKET) {
 
             if(token.value == "(") {
-                break_constructing = true;
-                semaphore_frag = new Fragment();
-                semaphore_frag->type = FragmentType::BRACKET_OPEN;
-                return;
+                if(!readingFunctionDeclaration)
+                {
+                    Fragment* inner_fragment = next_fragment();
+                    ParenthesesFragment* frag = new ParenthesesFragment(inner_fragment);
+                    this->last_frag = frag;
+
+                    this->finished_reading_stmt = false;
+                    delete semaphore_frag;
+                    semaphore_frag = nullptr;
+                }
+                else
+                {
+                    //reading arguments template
+                    semaphore_frag = new Fragment();
+                    semaphore_frag->type = FragmentType::BRACKET_OPEN;
+                    return;
+                }
+
             }
 
             else if(token.value == ")") {
-                break_constructing = true;
+                finished_reading_stmt = true;
                 semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::BRACKET_CLOSE;
                 return;
@@ -240,23 +283,34 @@ void SEQL::ASTCreator::read_fragment() {
             if (token.value == "[") {
                 //check if we use access operator, or start array
                 if(this->last_frag != nullptr) {
+                    if(
+                        this->last_frag->type == FragmentType::VARIABLE ||
+                        this->last_frag->type == FragmentType::ARRAY ||
+                        this->last_frag->type == FragmentType::ARRAY_ACCESS
+                    ) {
+                        auto arr_access = new ArrayAccessFragment();
+                        arr_access->array_frag = this->last_frag;
 
-                    bool isArrayValue = false;
-                    if(this->last_frag->type == FragmentType::OPERATOR) {
-                        auto oper = (OperatorFragment*)(this->last_frag);
-                        isArrayValue = oper->operator_type == OperatorType::ARRAY_REFERENCE;
-                    }
+                        semaphore_frag = new Fragment();
+                        semaphore_frag->type = FragmentType::SQUARE_BRACKET_OPEN;
 
-                    if(this->last_frag->type == FragmentType::VARIABLE || this->last_frag->type == FragmentType::STATEMENT_LINK || isArrayValue) {
-                        auto array_operator = new OperatorFragment();
-                        array_operator->operator_type  = OperatorType::ARRAY_REFERENCE;
-                        array_operator->l_arg = this->last_frag;
-                        array_operator->r_arg = this->next_fragment();
-                        array_operator->debug_value = array_operator->l_arg->debug_value + array_operator->r_arg->debug_value;
+                        new_reader_scope();
+                        auto stmt = this->read_statement();
+                        if(stmt->composed_statements.size() != 1)
+                        {
+                            error.message = "Index expression needs to consist of one sub statement";
+                            error.is_critical = true;
+                            raise_error();
+                        }
+                        pop_reader_scope();
+
+                        arr_access->index_expr = stmt->composed_statements[0];
+                        arr_access->index_expr->type = StatementType::NON_SPECIFIED;
+                        arr_access->debug_value = arr_access->array_frag->debug_value + "[]";
 
                         this->semaphore_frag = nullptr;
 
-                        this->last_frag = array_operator;
+                        this->last_frag = arr_access;
                         continue;
                     }
                 }
@@ -265,33 +319,37 @@ void SEQL::ASTCreator::read_fragment() {
                 semaphore_frag->type = FragmentType::SQUARE_BRACKET_OPEN;
                 auto array_statement = read_statement();
                 auto link = new ArrayFragment(array_statement);
+                //there maybe more stuff that has to be read
+                this->finished_reading_stmt = false;
                 this->last_frag = link;
-
-                return;
             }
-            else if(token.value == "]" && this->last_frag->type == FragmentType::VARIABLE || this->last_frag->type == FragmentType::VALUE ) {
+            else if(token.value == "]" && readingArrayRef) {
+                //finished reading array_ref
                 return;
             }
             else if (token.value == "]") {
+                //finished reading array_stmt
                 semaphore_frag = new Fragment();
                 semaphore_frag->type = FragmentType::SQUARE_BRACKET_CLOSE;
-                this->break_constructing = true;
+                this->finished_reading_stmt = true;
                 return;
             }
         }
         else if(token.type == TokenType::OPERATOR) {
 
             if( token.value == ";") {
-                break_constructing = true;
+                finished_reading_stmt = true;
                 return;
             }
             else if( token.value == ",") {
-                break_constructing = true;
+                finished_reading_stmt = true;
                 return;
             }
 
             auto binary_operators = std::map<std::string, OperatorType> {
                 {"+",  OperatorType::ADD},
+                {"+=",  OperatorType::PLUS_EQUAL},
+                {"-=",  OperatorType::MINUS_EQUAL},
                 {"=",  OperatorType::ASSIGN},
                 {"==", OperatorType::EQ},
                 {"<",  OperatorType::GREATER},
@@ -324,7 +382,7 @@ void SEQL::ASTCreator::read_fragment() {
                     char err_message[512];
                     std::string snippet = op->l_arg->debug_value + " " + token.value;
                     snprintf(err_message, sizeof(err_message), "Failed to read next fragment for %s", snippet.c_str());
-                    this->current_error = ASTError(
+                    this->error = ASTError(
                         err_message, this->current_line, true
                     );
 
@@ -344,18 +402,35 @@ void SEQL::ASTCreator::read_fragment() {
         }
         else if(token.type == TokenType::BOOLEAN)
         {
-            this->last_frag = new Value(token.value);
+            if(token.value == "true")
+            {
+                this->last_frag = new Value(true);
+            }
+            else if(token.value == "false")
+            {
+                this->last_frag = new Value(false);
+            }
+            else
+            {
+                this->error.message = "Invalid value for boolean";
+                raise_error();
+            }
             this->last_frag->debug_value = token.value;
         }
         else if(token.type == TokenType::VARIABLE)
         {
             auto var_name = token.value;
 
-            if(this->tokens[this->pos].value == "(") {
+            if(this->tokens[this->pos].value == "(" && !readingFunctionDeclaration) {
                 auto function_call = new FunctionCallFragment();
+                //read '('
+                this->readingFunctionDeclaration = true;
                 read_fragment();
+                this->readingFunctionDeclaration = false;
                 function_call->function_name = var_name;
+                new_reader_scope();
                 function_call->args = read_statement();
+                pop_reader_scope();
                 this->last_frag = function_call;
             }
             else {
@@ -366,6 +441,36 @@ void SEQL::ASTCreator::read_fragment() {
     }
 
 }
+
+void ASTCreator::load_reader_scope(ASTScope* scope)
+{
+    this->last_statement = scope->current_statement;
+
+    this->last_frag = scope->last_frag;
+
+    this->readingArrayRef = scope->readingArrayRef;
+    this->readingFunctionDeclaration = scope->readingFunctionDeclaration;
+}
+
+
+
+ASTScope * ASTCreator::new_reader_scope()
+{
+    ASTScope * scope = new ASTScope();
+    this->scopes.emplace(scope);
+    load_reader_scope(scope);
+
+    return scope;
+}
+
+ASTScope * ASTCreator::pop_reader_scope()
+{
+    auto scope = scopes.top();
+    scopes.pop();
+    load_reader_scope(scopes.top());
+    return scope;
+}
+
 
 Token ASTCreator::next(bool move_iter) {
     if(pos < tokens.size()) {
@@ -384,22 +489,22 @@ Token ASTCreator::next(bool move_iter) {
 }
 
 void ASTCreator::create_ast() {
+    new_reader_scope();
     while(this->pos < tokens.size()) {
         auto statement = read_statement();
         this->last_frag = nullptr;
         if(statement != nullptr) {
             this->as_tree.push_back(statement);
         }
-
     }
 }
 
 Statement *ASTCreator::read_statement() {
 
     auto statement = new Statement();
-
+    statement->line_no = this->current_line;
     this->last_statement = current_statement;
-    this->break_constructing = false;
+    this->finished_reading_stmt = false;
     this->current_statement = statement;
 
 
@@ -443,6 +548,9 @@ Statement *ASTCreator::read_statement() {
                 semaphore_frag->type == FragmentType::BRACKET_CLOSE
                 )
         {
+            delete statement;
+
+            this->current_statement = last_statement; 
             this->semaphore_frag = nullptr;
             return nullptr;
         }
@@ -472,7 +580,7 @@ VariableReferenceFragment::VariableReferenceFragment(const std::string &name) {
     this->name = name;
 }
 
-Variable::Variable(ValueType type, std::shared_ptr<Value> value_ptr, std::string name) {
+Variable::Variable(ValueType type, Value* value_ptr, std::string name) {
     this->value = value_ptr;
     this->name = std::move(name);
 }

@@ -15,6 +15,40 @@ std::string rtrim(const std::string &s)
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
+
+int32_t bytes_to_int(char* buffer)
+{
+    int32_t some = 0;
+    some |= (unsigned char)buffer[0];
+    some |= (unsigned char)buffer[1] << 8;
+    some |= (unsigned char)buffer[2] << 16;
+    some |= (unsigned char)buffer[3] << 24;
+
+    return some;
+}
+
+
+char* int_to_bytes(int32_t some)
+{
+    //
+    // 0000 0000 0000 0000
+    char * buffer = new char[sizeof(int)];
+    memcpy(buffer, &some, sizeof(int));
+    return buffer;
+
+}
+
+
+std::vector<std::string> split(std::string text, char delim) {
+    std::string line;
+    std::vector<std::string> vec;
+    std::stringstream ss(text);
+    while(std::getline(ss, line, delim)) {
+        vec.push_back(line);
+    }
+    return vec;
+}
+
 void debug_log(const std::string & log) {
 #ifdef DEBUG_LOGGING
     std::cout << "DEBUG LOG : " << log << std::endl;

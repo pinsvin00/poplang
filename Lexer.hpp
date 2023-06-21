@@ -27,18 +27,18 @@ class Token {
 public:
     TokenType type = TokenType::UNSPECIFIED;
     std::string value;
-    Token() = default;
-    explicit Token(std::string val);
+    // Token() = default;
+    // explicit Token(std::string val);
 };
 
-class Lexer {
-public:
-    unsigned int current_line = 1;
-    std::vector<std::string> lines;
-    std::vector<Token> tokens;
-    void tokenize(const std::string& line);
-    void tokenize_file(const std::string &path);
-};
+// class Lexer {
+// public:
+//     unsigned int current_line = 1;
+//     std::vector<std::string> lines;
+//     std::vector<Token> tokens;
+//     void tokenize(const std::string& line);
+//     void tokenize_file(const std::string &path);
+// };
 
 
 

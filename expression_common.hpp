@@ -8,6 +8,8 @@
 #include <stack>
 #include <functional>
 #include <memory>
+#include <stdio.h>
+#include <cstring>
 #include "Lexer.hpp"
 
 namespace SEQL {
@@ -24,9 +26,11 @@ namespace SEQL {
         CURLY_BRACKET_CLOSE,
         BRACKET_OPEN,
         BRACKET_CLOSE,
-
-        STATEMENT_LINK,
+        PARENTHESES,
+        ARRAY,
         FUNCTION_CALL,
+        DO_FRAGMENT,
+        ARRAY_ACCESS,
     };
 
     enum class StatementType {
@@ -45,6 +49,7 @@ namespace SEQL {
         BOOL,
         ARRAY,
         UNSPECIFIED,
+        OBJ,
     };
 
     enum class OperatorType {
@@ -66,6 +71,8 @@ namespace SEQL {
         NEGATE,
         MODULO,
         DOT,
+        PLUS_EQUAL,
+        MINUS_EQUAL,
     };
 
     enum class KeywordType {
@@ -83,7 +90,7 @@ namespace SEQL {
         RETURN,
     };
 
-
+    class Engine;
 
     class Fragment {
     public:
@@ -97,7 +104,7 @@ namespace SEQL {
     public:
         Statement() = default;
         ~Statement();
-
+        size_t line_no = 0;
         StatementType type = StatementType::NON_SPECIFIED;
         Fragment* ast_root = nullptr;
         Statement * child_statement = nullptr;
@@ -112,14 +119,12 @@ namespace SEQL {
         bool is_composed = false;
     };
 
-    struct Function {
-        std::string name;
-        Statement * function_args = nullptr;
-        Statement * function_body = nullptr;
-    };
-
     class FunctionCallFragment : public Fragment {
     public:
+        ~FunctionCallFragment()
+        {
+            delete args;
+        }
         FunctionCallFragment() {
             this->type = FragmentType::FUNCTION_CALL;
         }
@@ -130,35 +135,138 @@ namespace SEQL {
 
     class Value : public Fragment {
     public:
-        virtual ~Value() = default;
-        explicit Value(std::string value) : result(std::move(value)) {
+        ~Value() {
+            if(dispose == true)
+            {
+                delete result;
+                delete array_values;
+                delete mapped_values;
+            }
+        };
+        Value(bool tf) 
+        {
             this->type = FragmentType::VALUE;
+            this->value_type = ValueType::BOOL;
+            this->result = new char[1];
+            this->result_sz = 1;
+            this->result[0] = (int)tf;
         }
-        Value(std::shared_ptr<Value> val) {
-            this->type = val->type;
-            this->result = val->result;
-            this->array_values = val->array_values;
+        Value(std::string value) {
+            this->type = FragmentType::VALUE;
+            this->value_type = ValueType::STRING;
+            this->result = new char[value.size() + 1];
+            this->result_sz = value.size() + 1; //include "\0"
+            memcpy(this->result, value.c_str(), value.size() + 1);
+        }
+        Value(int32_t value){
+            this->type = FragmentType::VALUE;
+            this->value_type = ValueType::NUMBER;
+            this->result = new char[sizeof(value)];
+            this->result_sz = sizeof(value);
+            memcpy(this->result, &value, sizeof(value));
+
+        }
+        Value(char* arr, size_t sz, ValueType val_type, bool copy=true)
+        {
+            this->type = FragmentType::VALUE;
+            this->value_type = val_type;
+            this->result_sz = sz;
+            if(copy)
+            {
+                this->result = new char[sz];
+                memcpy(arr, this->result, sz);
+            }
+            else
+            {
+                this->result = arr;
+            }
+            this->result = arr;
+        }
+        Value(Value* val, bool copy=true)
+        {
+            this->type = FragmentType::VALUE;
+            this->value_type = val->value_type;
+            this->result_sz = val->result_sz;
+            if(val->value_type == ValueType::ARRAY)
+            {
+                if(copy)
+                {
+                    this->array_values = new std::vector<Value*>();
+                    auto& values = *val->array_values;
+                    for(size_t i = 0; i < values.size() ; i++)
+                    {
+                        this->array_values->push_back(new Value(values[i], copy));
+                    }
+                }
+                else
+                {
+                    this->array_values = val->array_values;
+                }
+            }
+            else if(val->value_type == ValueType::OBJ)
+            {
+                if(copy)
+                {
+                    //implement this!
+                    this->mapped_values = val->mapped_values;
+                }
+                else
+                {
+                    this->mapped_values = val->mapped_values;
+                }
+            }
+            else
+            {
+                if(copy)
+                {
+                    this->result = new char[result_sz];
+                    memcpy(this->result, val->result , result_sz);
+                }
+                else
+                {
+                    this->result = val->result;
+                }
+                this->array_values = val->array_values;
+            }
+
         }
 
         Value() = default;
         ValueType value_type = ValueType::UNSPECIFIED;
 
-        std::string result;
+        //If value is stored in some variable or is in code, it should persist
+        bool dispose = true; 
+        //There are some variables, than can be pre-maturily deleted
+        bool is_mature = true;
+
+
+        size_t result_sz = 0;
+        char* result = nullptr;
 
         //array value
         Statement * array_statement = nullptr;
-        std::vector<std::shared_ptr<Value>> array_values;
+        std::vector<Value*> * array_values = nullptr;
+        //todo add better indexing
+        std::map<std::string, Value*> * mapped_values = nullptr;
 
+    };
+
+    struct Function {
+        std::string name;
+        bool is_native = false;
+        Value* (*native_templated_func)(std::vector<Value*>, Engine* self) = nullptr;
+        Statement * function_args = nullptr;
+        Statement * function_body = nullptr;
     };
 
     class Variable {
     public:
         std::string name;
-        std::shared_ptr<Value> value = nullptr;
+        Value* value = nullptr;
 
-        Variable(ValueType type, std::shared_ptr<Value> value_ptr, std::string name);
+        Variable(ValueType type, Value* value_ptr, std::string name);
         Variable() {
-            this->value = std::make_shared<Value>();
+            this->value = new Value(0);
         };
     };
 
@@ -177,8 +285,15 @@ namespace SEQL {
     class VariableReferenceFragment : public Fragment {
     public:
         std::string name;
-    public:
         explicit VariableReferenceFragment(const std::string &name);
+    };
+
+    class DoFragment : public Fragment {
+    public:
+        Statement * stmt;
+        DoFragment(){
+            this->type = FragmentType::DO_FRAGMENT;
+        }
     };
 
     class OperatorFragment : public Fragment {
@@ -195,15 +310,40 @@ namespace SEQL {
         }
     };
 
+    class ParenthesesFragment : public Fragment {
+        public:
+            ~ParenthesesFragment()
+            {
+                delete inner_frag;
+            }
+            explicit ParenthesesFragment(Fragment * frag) : inner_frag(frag){
+                this->type = FragmentType::PARENTHESES;
+            }
+            Fragment * inner_frag = nullptr;
+            void reset() 
+            {
+                delete inner_frag;
+            }
+    };
 
 
+    class ArrayAccessFragment : public Fragment {
+    public:
+        Fragment * array_frag = nullptr;
+        Statement * index_expr = nullptr;
+
+        ArrayAccessFragment()
+        {
+            this->type = FragmentType::ARRAY_ACCESS;
+        }
+
+    };
 
     class ArrayFragment : public Fragment {
-
     public:
         explicit ArrayFragment(Statement * statement) {
             this->statement = statement;
-            this->type = FragmentType::STATEMENT_LINK;
+            this->type = FragmentType::ARRAY;
         }
 
         Statement * statement = nullptr;
@@ -224,6 +364,17 @@ namespace SEQL {
         bool is_critical = false;
     };
 
+
+    struct ASTScope {
+        Fragment * last_frag = nullptr;
+
+        Statement * last_statement = nullptr;
+        Statement * current_statement = nullptr;
+
+        bool readingFunctionDeclaration = false;
+        bool readingArrayRef = false;
+    };
+
     class ASTCreator {
 
         unsigned int pos = 0;
@@ -234,32 +385,34 @@ namespace SEQL {
         Statement * last_statement = nullptr;
         Statement * current_statement = nullptr;
 
+        std::stack<ASTScope*> scopes;
+
+        ASTScope * new_reader_scope();
+        ASTScope * pop_reader_scope();
+        void load_reader_scope(ASTScope* scope);
 
         Token next(bool move_iter = true);
         Fragment * next_fragment();
         void read_fragment();
         void rollback();
         void raise_error();
+
+        bool readingFunctionDeclaration = false;
+        bool readingArrayRef = false;
+
     public:
         ASTState state = ASTState::WORK;
-        ASTError current_error;
+        ASTError error;
 
         std::map<std::string, Function*> declared_functions;
         ASTCreator() = default;
         std::vector<Token> tokens;
         std::vector<Statement *> as_tree;
         void create_ast();
-        bool break_constructing = false;
+        bool finished_reading_stmt = false;
         Statement * read_statement();
 
         ~ASTCreator() {
-            // if(current_statement != nullptr)
-            // {
-            //     delete current_statement;
-            //     current_statement = nullptr;
-            // }
-
-
             for(auto & element : as_tree) {
                 if(element != nullptr)
                 {
