@@ -4,6 +4,7 @@
 #include <set>
 #include <algorithm>
 #include "expression_common.hpp"
+#include "value.hpp"
 
 class GarbageCollector {
     //all value pointers

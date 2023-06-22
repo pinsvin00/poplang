@@ -63,7 +63,9 @@ SEQL::Value * SEQL::Engine::str(SEQL::Value * value)
         std::string value = st == 1 ? "true" : "false";
         return NEW_VALUE(value);
     }
-
+    else {
+        return NEW_VALUE();
+    }
 }
 
 SEQL::Value * SEQL::Engine::str(std::vector<SEQL::Value *> val) 
@@ -110,7 +112,7 @@ SEQL::Value * SEQL::Engine::to_int(std::vector<SEQL::Value *> val)
     }
     else
     {
-        sprintf(this->error.message, "Cannot convert value with %s type to int");
+        sprintf(this->error.message, "Cannot convert value with %s type to int", "todo");
         this->error.is_critical = true;
         raise_error();
     }
@@ -145,6 +147,7 @@ SEQL::Value * SEQL::Engine::type_of(std::vector<SEQL::Value *> val)
     {
         return new Value("unspecified");
     }
+    else return new Value();
 }
 SEQL::Value * SEQL::Engine::format( std::vector<SEQL::Value*> args)
 {
@@ -181,6 +184,8 @@ SEQL::Value * SEQL::Engine::println(std::vector<SEQL::Value *> val)
     }
     auto r = str(val)->result;
     std::cout << r << std::endl;
+
+    return NEW_VALUE();
 }
 SEQL::Value * SEQL::Engine::print(std::vector<SEQL::Value *> val)
 {
@@ -188,6 +193,8 @@ SEQL::Value * SEQL::Engine::print(std::vector<SEQL::Value *> val)
         raise_error();
     }
     std::cout << str(val)->result;
+
+    return NEW_VALUE();
 }
 
 SEQL::Value * SEQL::Engine::obj(std::vector<SEQL::Value*> val)

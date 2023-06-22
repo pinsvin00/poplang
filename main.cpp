@@ -3,12 +3,15 @@
 #include <map>
 #include "expression.hpp"
 #include "Lexer.hpp"
+#include "Asago/parser.h"
 #include "Engine.h"
 
 using namespace std;
 
 int main(int argc, char** argv) {
 
+    Asago::Parser p;
+    p.load_from_file("weather.json");
     #ifdef DEBUG_LOGGING
     for(int i = 0 ; i < argc ;i ++)
     {

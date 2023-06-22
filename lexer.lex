@@ -5,6 +5,8 @@ of lines other for number of characters */
 #include <cstdlib>
 #include <iostream>
 #include "Lexer.hpp"
+
+using namespace SEQL;
 std::vector<Token> __toks;
 
 char* substr(const char *src, int m, int n)

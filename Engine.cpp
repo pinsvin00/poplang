@@ -213,7 +213,6 @@ SEQL::Value* SEQL::Engine::eval(Fragment* fragment) {
         ArrayFragment* link = (ArrayFragment*)(fragment);
         Value* array_value = new Value();
         array_value->is_mature = false;
-        array_value->array_statement = link->statement;
         array_value->value_type = ValueType::ARRAY;
 
         array_value->array_statement = link->statement;

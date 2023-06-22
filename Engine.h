@@ -9,6 +9,7 @@
 #include "Lexer.hpp"
 #include "gc.h"
 #include "utils.hpp"
+#include "value.hpp"
 #include <string>
 #include <map>
 #include <algorithm>
@@ -18,7 +19,7 @@ extern int   yylex();
 extern char* yytext;
 extern int   yyleng;
 extern FILE * yyin;
-extern std::vector<Token> __toks;
+extern std::vector<SEQL::Token> __toks;
 
 namespace SEQL {
 

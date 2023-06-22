@@ -537,6 +537,8 @@ of lines other for number of characters */
 #include <cstdlib>
 #include <iostream>
 #include "Lexer.hpp"
+
+using namespace SEQL;
 std::vector<Token> __toks;
 
 char* substr(const char *src, int m, int n)
@@ -562,8 +564,8 @@ char* substr(const char *src, int m, int n)
     return dest - len;
 }
 
-#line 566 "lex.yy.c"
-#line 567 "lex.yy.c"
+#line 568 "lex.yy.c"
+#line 569 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -780,9 +782,9 @@ YY_DECL
 		}
 
 	{
-#line 40 "lexer.lex"
+#line 42 "lexer.lex"
 
-#line 786 "lex.yy.c"
+#line 788 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -841,7 +843,7 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 41 "lexer.lex"
+#line 43 "lexer.lex"
 {
     Token tok;
     tok.value = strdup(yytext);
@@ -851,7 +853,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 48 "lexer.lex"
+#line 50 "lexer.lex"
 {
     Token tok;
     tok.value = strdup(yytext);
@@ -862,7 +864,7 @@ YY_RULE_SETUP
 case 3:
 /* rule 3 can match eol */
 YY_RULE_SETUP
-#line 55 "lexer.lex"
+#line 57 "lexer.lex"
 {
     Token tok;
     size_t strl = strlen(yytext);
@@ -874,7 +876,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 64 "lexer.lex"
+#line 66 "lexer.lex"
 {
     Token tok;
     tok.type = TokenType::NIL;
@@ -885,7 +887,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 72 "lexer.lex"
+#line 74 "lexer.lex"
 {
     Token tok;
     tok.value = strdup(yytext);
@@ -895,7 +897,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 79 "lexer.lex"
+#line 81 "lexer.lex"
 {
     Token tok;
     tok.value = strdup(yytext);
@@ -905,7 +907,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 86 "lexer.lex"
+#line 88 "lexer.lex"
 {
     Token tok;
     tok.value = strdup(yytext);
@@ -915,7 +917,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 93 "lexer.lex"
+#line 95 "lexer.lex"
 {
     Token tok;
     tok.value = strdup(yytext);
@@ -925,7 +927,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 101 "lexer.lex"
+#line 103 "lexer.lex"
 {
     Token tok;
     tok.value = strdup(yytext);
@@ -935,7 +937,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 108 "lexer.lex"
+#line 110 "lexer.lex"
 {
     Token tok;
     tok.value = strdup(yytext);
@@ -945,7 +947,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 115 "lexer.lex"
+#line 117 "lexer.lex"
 {
     Token tok;
     tok.type = TokenType::VARIABLE;
@@ -956,20 +958,20 @@ YY_RULE_SETUP
 case 12:
 /* rule 12 can match eol */
 YY_RULE_SETUP
-#line 122 "lexer.lex"
+#line 124 "lexer.lex"
 /* eat up whitespace */
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 124 "lexer.lex"
+#line 126 "lexer.lex"
 printf( "Unrecognized character: %s\n", yytext );
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 126 "lexer.lex"
+#line 128 "lexer.lex"
 ECHO;
 	YY_BREAK
-#line 973 "lex.yy.c"
+#line 975 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1974,7 +1976,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 126 "lexer.lex"
+#line 128 "lexer.lex"
 
  
 /*** User code section***/

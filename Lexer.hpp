@@ -9,36 +9,30 @@
 #include <vector>
 #include <map>
 #include <fstream>
+namespace SEQL
+{
+    enum class TokenType {
+        STRING,
+        NUMBER,
+        NIL,
+        BOOLEAN,
+        VARIABLE,
+        KEYWORD,
+        OPERATOR,
+        CURLY_BRACKET,
+        BRACKET,
+        UNSPECIFIED,
+    };
 
-enum class TokenType {
-    STRING,
-    NUMBER,
-    NIL,
-    BOOLEAN,
-    VARIABLE,
-    KEYWORD,
-    OPERATOR,
-    CURLY_BRACKET,
-    BRACKET,
-    UNSPECIFIED,
-};
+    class Token {
+    public:
+        TokenType type = TokenType::UNSPECIFIED;
+        std::string value;
+        // Token() = default;
+        // explicit Token(std::string val);
+    };
+}
 
-class Token {
-public:
-    TokenType type = TokenType::UNSPECIFIED;
-    std::string value;
-    // Token() = default;
-    // explicit Token(std::string val);
-};
-
-// class Lexer {
-// public:
-//     unsigned int current_line = 1;
-//     std::vector<std::string> lines;
-//     std::vector<Token> tokens;
-//     void tokenize(const std::string& line);
-//     void tokenize_file(const std::string &path);
-// };
 
 
 

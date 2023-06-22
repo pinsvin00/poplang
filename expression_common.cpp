@@ -486,6 +486,7 @@ Token ASTCreator::next(bool move_iter) {
             pos++;
         return tok;
     }
+    return Token();
 }
 
 void ASTCreator::create_ast() {
