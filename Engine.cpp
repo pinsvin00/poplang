@@ -29,9 +29,9 @@ std::string SEQL::Engine::stringifyValue(Value * value) {
 void SEQL::Engine::execute_file(const std::string& path) {
     FILE *fp;
     fp = fopen(path.c_str(),"r");
-    yyin = fp;
+    popin = fp;
 
-    yylex();
+    poplex();
 
     this->ast_creator->tokens = __toks;
     #ifdef DEBUG_LEXER

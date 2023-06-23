@@ -4,6 +4,7 @@
 #include "expression.hpp"
 #include "Lexer.hpp"
 #include "Asago/parser.h"
+#include "Asago/ValuePrinter.h"
 #include "Engine.h"
 
 using namespace std;
@@ -11,7 +12,11 @@ using namespace std;
 int main(int argc, char** argv) {
 
     Asago::Parser p;
-    p.load_from_file("weather.json");
+    Asago::ValuePrinter prtr;
+    auto k = p.load_from_file("weather.json");
+
+    prtr.printValue(k);
+
     #ifdef DEBUG_LOGGING
     for(int i = 0 ; i < argc ;i ++)
     {

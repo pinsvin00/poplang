@@ -9,7 +9,7 @@ of lines other for number of characters */
 using namespace SEQL;
 std::vector<Token> __toks;
 
-char* substr(const char *src, int m, int n)
+char* _substr(const char *src, int m, int n)
 {
     // get the length of the destination string
     int len = n - m;
@@ -57,7 +57,7 @@ VARIABLE [a-zA-Z_]+[a-zA-Z_$0-9]*
 {STRING} {
     Token tok;
     size_t strl = strlen(yytext);
-    tok.value = substr(yytext, 1, strl-1);
+    tok.value = _substr(yytext, 1, strl-1);
     tok.type = TokenType::STRING;
 
     __toks.push_back(tok);

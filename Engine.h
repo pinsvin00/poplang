@@ -15,10 +15,10 @@
 #include <algorithm>
 
 
-extern int   yylex();
-extern char* yytext;
-extern int   yyleng;
-extern FILE * yyin;
+extern int   poplex();
+extern char* poptext;
+extern int   popleng;
+extern FILE * popin;
 extern std::vector<SEQL::Token> __toks;
 
 namespace SEQL {
