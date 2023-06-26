@@ -12,6 +12,7 @@ Value::~Value()
 };
 Value::Value(bool tf)
 {
+    this->type = FragmentType::VALUE;
     this->value_type = ValueType::BOOL;
     this->result = new char[1];
     this->result_sz = 1;
@@ -19,6 +20,7 @@ Value::Value(bool tf)
 }
 Value::Value(std::string value)
 {
+    this->type = FragmentType::VALUE;
     this->value_type = ValueType::STRING;
     this->result = new char[value.size() + 1];
     this->result_sz = value.size() + 1; // include "\0"
@@ -26,6 +28,7 @@ Value::Value(std::string value)
 }
 Value::Value(double value)
 {
+    this->type = FragmentType::VALUE;
     this->value_type = ValueType::DOUBLE;
     this->result = new char[sizeof(value)];
     this->result_sz = sizeof(value);
@@ -33,6 +36,7 @@ Value::Value(double value)
 }
 Value::Value(int32_t value)
 {
+    this->type = FragmentType::VALUE;
     this->value_type = ValueType::NUMBER;
     this->result = new char[sizeof(value)];
     this->result_sz = sizeof(value);
@@ -40,6 +44,7 @@ Value::Value(int32_t value)
 }
 Value::Value(char *arr, size_t sz, ValueType val_type, bool copy)
 {
+    this->type = FragmentType::VALUE;
     this->value_type = val_type;
     this->result_sz = sz;
     if (copy)
@@ -55,6 +60,7 @@ Value::Value(char *arr, size_t sz, ValueType val_type, bool copy)
 }
 Value::Value(Value *val, bool copy)
 {
+    this->type = FragmentType::VALUE;
     this->value_type = val->value_type;
     this->result_sz = val->result_sz;
     if (val->value_type == ValueType::ARRAY)

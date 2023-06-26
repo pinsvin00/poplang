@@ -7,6 +7,9 @@
 
 #include "expression_common.hpp"
 #include "Lexer.hpp"
+#include "Asago/parser.h"
+#include "Asago/ValuePrinter.h"
+#include "cpp_channel.hpp"
 #include "gc.h"
 #include "utils.hpp"
 #include "value.hpp"
@@ -48,12 +51,16 @@ namespace SEQL {
     };
 
     class Engine {
-        // Lexer * lexer = nullptr;
         GarbageCollector* gc = new GarbageCollector();
 
         ASTCreator * ast_creator = nullptr;
-        Value* stored_value = nullptr; 
+        Value* stored_value = nullptr;
+        Asago::Parser parser;
+        Asago::ValuePrinter prntr;
+
         std::vector<Scope*> scopes;
+        std::vector<CPPChannel *> channels;
+
         bool fatal_error_occured = false;
         RuntimeSEQLError error;
         void raise_error();
@@ -61,11 +68,14 @@ namespace SEQL {
         void make_new_scope();
         std::vector<Value*> resolve_args(Statement * statement);
         void load_default_functions();
-
+        SEQL::Value * start_function(FunctionCallFragment* frag);
     public:
         Engine();
         void execute_file(const std::string& path);
         void execute_statement(Statement * statement);
+
+        void run_function(std::string fun_name, std::vector<SEQL::Value*> vals);
+
 
         bool break_requested = false;
         bool continue_requested = false;
@@ -88,6 +98,12 @@ namespace SEQL {
         Value * println(std::vector<SEQL::Value *> val);
         Value * print(std::vector<SEQL::Value *> val);
         Value * obj(std::vector<SEQL::Value*> val);
+        Value * make_request(std::vector<SEQL::Value*> val);
+        Value * channel_to_cpp(std::vector<SEQL::Value*> val);
+
+
+        void register_channel(CPPChannel * channel);
+
 
         std::string stringifyValue(Value* val);
 

@@ -12,21 +12,21 @@
 namespace SEQL{
 
 
-class Statement;
+    class Statement;
 
-enum class ValueType {
-    NUMBER,
-    STRING,
-    BOOL,
-    ARRAY,
-    UNSPECIFIED,
-    NIL,
-    DOUBLE,
-    OBJ,
-};
+    enum class ValueType {
+        NUMBER,
+        STRING,
+        BOOL,
+        ARRAY,
+        UNSPECIFIED,
+        NIL,
+        DOUBLE,
+        OBJ,
+    };
 
 
-class Value : public Fragment {
+    class Value : public Fragment {
     public:
         ~Value();
         Value(bool tf) ;

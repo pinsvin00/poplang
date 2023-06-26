@@ -176,15 +176,18 @@ SEQL::Value * SEQL::Engine::format( std::vector<SEQL::Value*> args)
     result += format.substr(start, end);
     return new Value(result);
 }
-
+SEQL::Value * SEQL::Engine::make_request(std::vector<SEQL::Value *> val)
+{
+    SEQL::Value * url = val.at(0);
+    return parser.load_from_url(stringifyValue(url));    
+}
 SEQL::Value * SEQL::Engine::println(std::vector<SEQL::Value *> val)
 {
     if(val.size() != 1) {
         raise_error();
     }
-    auto r = str(val)->result;
-    std::cout << r << std::endl;
-
+    prntr.printValue(val[0]);
+    std::cout << std::endl;
     return NEW_VALUE();
 }
 SEQL::Value * SEQL::Engine::print(std::vector<SEQL::Value *> val)
@@ -192,8 +195,7 @@ SEQL::Value * SEQL::Engine::print(std::vector<SEQL::Value *> val)
     if(val.size() != 1) {
         raise_error();
     }
-    std::cout << str(val)->result;
-
+    prntr.printValue(val[0]);
     return NEW_VALUE();
 }
 
@@ -205,6 +207,40 @@ SEQL::Value * SEQL::Engine::obj(std::vector<SEQL::Value*> val)
     value->mapped_values = new std::map<std::string, Value*>();
     return value;
 }
+
+
+SEQL::Value * SEQL::Engine::channel_to_cpp(std::vector<SEQL::Value*> val)
+{
+    if(val.size() == 0){
+        return NEW_VALUE();
+    }
+
+    auto channel_name = stringifyValue(val[0]);
+    CPPChannel * chn = nullptr;;
+    for(auto & element : this->channels)
+    {
+        if(element->name == channel_name) {
+            chn = element;
+            break;
+        }
+    }
+    if(chn == nullptr)
+    {
+        return NEW_VALUE();
+    }
+
+    std::vector<SEQL::Value *> rest_args;
+    for (size_t i = 1; i < val.size(); i++)
+    {
+        rest_args.push_back(val[i]);
+    }
+
+    chn->onTrigger(rest_args);
+
+    return NEW_VALUE();
+}
+
+
 
 
 // SEQL::Value * SEQL::Engine::set_seed(SEQL::Value * seed)

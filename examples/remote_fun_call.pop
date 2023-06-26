@@ -1,0 +1,8 @@
+fun some2(a,b) {
+    return a * b;
+}
+
+fun some1(a,b) {
+    var result = some2(a * b, a + b);
+    println(result);
+}

@@ -472,7 +472,7 @@ ASTScope * ASTCreator::pop_reader_scope()
 }
 
 
-Token ASTCreator::next(bool move_iter) {
+SEQL::Token ASTCreator::next(bool move_iter) {
     if(pos < tokens.size()) {
         Token tok = tokens[pos];
         if(tok.value == "\n")
@@ -568,7 +568,7 @@ Statement *ASTCreator::read_statement() {
     return statement;
 }
 
-Fragment * ASTCreator::next_fragment() {
+SEQL::Fragment * ASTCreator::next_fragment() {
     read_fragment();
     return this->last_frag;
 }

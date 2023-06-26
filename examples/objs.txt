@@ -1,1 +1,1 @@
-{"additional_data" : {"address" : Negra Arroyo Lane 308 , "name" : Walter Hartwell White } , "is_complex" : false , "version" : 1.1 }
+{"additional_data" : {"address" : "Negra Arroyo Lane 308" , "name" : "Walter Hartwell White" } , "is_complex" : false , "version" : "1.1" }
